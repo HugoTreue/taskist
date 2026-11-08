@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="build" content="20261108-230008">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Taskist</title>
 <meta name="theme-color" content="#000000" id="mtc">
@@ -727,7 +728,7 @@ function edChanged(){edDirty=true;clearTimeout(edSaveT);edSaveT=setTimeout(edSav
 function closeNote(){
  edSave();
  if(cur&&!cur._new&&noteEmpty()){var idx=S.notes.indexOf(cur);if(idx>-1){S.notes.splice(idx,1);save()}}
- $('#ed').hidden=true;$('#stp').hidden=true;document.body.style.overflow='';cur=null;edB.blur();render();
+ $('#ed').hidden=true;$('#stp').hidden=true;document.body.style.overflow='';cur=null;edB.blur();render();if(updPending){updPending=false;setTimeout(doUpdate,300)}
 }
 edT.addEventListener('input',edChanged);
 edT.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();edB.focus();placeCaret(edB,true)}});
@@ -910,8 +911,22 @@ function finishDraw(){
 }
 /* ---------- keyboard offset ---------- */
 if(window.visualViewport){var vv=window.visualViewport;var kbF=function(){var k=Math.max(0,window.innerHeight-vv.height-vv.offsetTop);document.documentElement.style.setProperty('--kb',(k>60?k:0)+'px')};vv.addEventListener('resize',kbF);vv.addEventListener('scroll',kbF)}
+/* ---------- auto update ---------- */
+var BUILD=(document.querySelector('meta[name=build]')||{}).content||'',updPending=false,updChecking=false;
+function doUpdate(){
+ if(!$('#ed').hidden||!$('#dw').hidden){updPending=true;return}
+ try{if(sessionStorage.getItem('taskist.upd')===BUILD)return;sessionStorage.setItem('taskist.upd',BUILD)}catch(e){}
+ Promise.resolve(saveT?persist():0).then(function(){return navigator.serviceWorker&&navigator.serviceWorker.getRegistrations?navigator.serviceWorker.getRegistrations().then(function(r){return Promise.all(r.map(function(x){return x.update().catch(function(){})}))}):0}).then(function(){return window.caches?caches.keys().then(function(k){return Promise.all(k.map(function(x){return caches.delete(x)}))}):0}).then(function(){location.reload()},function(){location.reload()});
+}
+function checkUpdate(){
+ if(updChecking||location.protocol.indexOf('http')!==0||!BUILD)return;updChecking=true;
+ fetch(location.pathname+'?build='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.text():''}).then(function(t){updChecking=false;var m=/<meta name="build" content="([^"]+)"/.exec(t||'');if(m&&m[1]!==BUILD)doUpdate()}).catch(function(){updChecking=false});
+}
+document.addEventListener('visibilitychange',function(){if(!document.hidden)checkUpdate()});
+window.addEventListener('focus',checkUpdate);
+setInterval(function(){if(!document.hidden)checkUpdate()},5*60*1000);
 /* ---------- boot ---------- */
-load().then(function(d){S=norm(d||fresh());if(!d)persist();applyTheme();purge();render();checkDue()});
+load().then(function(d){S=norm(d||fresh());if(!d)persist();applyTheme();purge();render();checkDue();checkUpdate()});
 if('serviceWorker' in navigator&&location.protocol.indexOf('http')===0){try{navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}}
 })();
 </script>
