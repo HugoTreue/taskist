@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="build" content="20261108-234253">
+<meta name="build" content="20261108-234456">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Taskist</title>
 <meta name="theme-color" content="#000000" id="mtc">
@@ -170,8 +170,8 @@ svg{display:block}
 .edb img.hw{border-radius:0;max-height:none}
 .edb img.cardimg{border-radius:16px;box-shadow:0 6px 18px rgba(0,0,0,.35)}
 .edb img.pick{outline:3px solid var(--ac);outline-offset:2px}
-.edbar{position:fixed;left:0;right:0;bottom:var(--kb);z-index:31;background:inherit;display:flex;justify-content:space-around;padding:4px 0 calc(5px + env(safe-area-inset-bottom));max-width:680px;margin:0 auto}
-.edbar button{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;min-width:60px}.edbar svg{width:22px;height:22px}.edtop .ic svg{max-width:22px;max-height:22px}
+.edbar{position:fixed;left:0;right:0;bottom:var(--kb);z-index:31;background:inherit;display:flex;justify-content:stretch;padding:9px 24px calc(9px + env(safe-area-inset-bottom));max-width:680px;margin:0 auto}
+.edbar button{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:10.5px;font-weight:500;line-height:1.2;letter-spacing:0;color:var(--tx);opacity:.88}.edbar svg{width:24px;height:24px}.edtop .ic svg{max-width:22px;max-height:22px}
 .edbar button.on{color:var(--ac)}
 /* style panel */
 .stp{position:fixed;left:0;right:0;bottom:var(--kb);z-index:32;background:inherit;padding:10px 20px calc(12px + env(safe-area-inset-bottom));max-width:680px;margin:0 auto;border-top:1px solid var(--ln);animation:su .2s}
@@ -274,8 +274,8 @@ html{background:var(--bg)}
 .ed.view #edbar,.ed:not(.view) #vbar{display:none}
 .ed.view .edb{caret-color:transparent;-webkit-user-select:text;user-select:text}
 .ed.view .edt{pointer-events:auto}
-.vbar .vi{display:grid;place-items:center;width:22px;height:22px}
-.vbar .vi svg{width:21px;height:21px}
+.vbar .vi{display:grid;place-items:center;width:24px;height:24px}
+.vbar .vi svg{width:23px;height:23px}
 #vFav.on{color:#f4b63d}
 .pop button.hl{background:rgba(47,123,246,.32);color:#5b9dff;border-radius:14px;margin:0 6px;width:calc(100% - 12px);padding-left:16px}
 :root[data-th=light] .pop button.hl{background:rgba(37,111,255,.12);color:var(--ac)}
@@ -422,7 +422,7 @@ var IC={
  chk:'<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M7.5 12.5l3 3 6-6.5"/></svg>',
  sty:'<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 15L6 5.5 9.5 15M3.8 11.8h4.4M12 7h9.5M12 11h9.5M12 15h9.5M2.5 19.5h19"/></svg>',
  gal:'<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3.5"/><circle cx="9" cy="9" r="1.8"/><path d="M3.5 17l5-5 4 4 2.5-2.5 5.5 5"/></svg>',
- pen:'<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 4.5l4 4L9 19H5v-4z"/><path d="M3 21.5c2-1.5 4-2 6-1.5s4 .5 6-1"/></svg>',
+ pen:'<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17.2 3.6a1.6 1.6 0 0 1 2.3 0l.9.9a1.6 1.6 0 0 1 0 2.3L8.5 18.7 4.6 19.6l.9-3.9z"/><path d="M15.3 5.5l3.2 3.2"/><path d="M11 20.2c1.6-.9 3-1.2 4.2-.6 1.3.6 2.6.7 4.3-.2"/></svg>',
  cam:'<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M3 8a2 2 0 0 1 2-2h2.5l1.5-2h6l1.5 2H19a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="3.8"/></svg>',
  scan:'<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2M3 12h18"/></svg>',
  card:'<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3 9.5h18M6.5 15h4"/></svg>',
