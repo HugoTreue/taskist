@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="build" content="20261108-234456">
+<meta name="build" content="20261108-234646">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Taskist</title>
 <meta name="theme-color" content="#000000" id="mtc">
@@ -157,12 +157,12 @@ svg{display:block}
 .edm .chip i{font-style:normal;display:inline-block;border-left:5px solid transparent;border-right:5px solid transparent;border-top:7px solid currentColor;margin-left:2px}
 .edb{outline:0;min-height:50vh;font-size:var(--fs,16px);line-height:1.55;word-wrap:break-word;caret-color:var(--ac)}
 .edb:empty:before{content:attr(data-ph);color:var(--mu);opacity:.7}
-.edb ul,.edb ol{padding-left:26px;margin:4px 0}
+.edb ul,.edb ol{padding-left:26px;margin:0}
 .edb ul.sq{list-style-type:square}
 .edb ol.al{list-style-type:lower-alpha}
 .edb ul.chk{list-style:none;padding-left:0}
-.edb ul.chk>li{position:relative;padding:4px 0 4px 36px;min-height:1.55em}
-.edb ul.chk>li:before{content:'';position:absolute;left:0;top:calc(4px + .775em - 11px);width:22px;height:22px;border:2px solid var(--mu);border-radius:50%;box-sizing:border-box}
+.edb ul.chk>li{position:relative;padding:2px 0 2px 36px;min-height:1.55em}
+.edb ul.chk>li:before{content:'';position:absolute;left:0;top:calc(2px + .775em - 11px);width:22px;height:22px;border:2px solid var(--mu);border-radius:50%;box-sizing:border-box}
 .edb ul.chk>li[data-done="1"]{color:var(--mu);text-decoration:line-through}
 .edb ul.chk>li[data-done="1"]:before{background:var(--ac) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 12.5l4 4 8-9'/%3E%3C/svg%3E") center/14px no-repeat;border-color:var(--ac)}
 .edb .im{margin:10px 0;line-height:0}
@@ -816,7 +816,7 @@ function setMode(view){
 }
 function syncFav(){if(!cur)return;var f=$('#vFav');f.classList.toggle('on',!!cur.star);$('#viFav').innerHTML=cur.star?VI.starF:VI.star;$('#vFavT').textContent=cur.star?'Unfavourite':'Favourite'}
 function editAt(x,y){
- setMode(false);edB.focus();var r=null;
+ setMode(false);edB.focus({preventScroll:true});var r=null;
  try{if(document.caretRangeFromPoint)r=document.caretRangeFromPoint(x,y);else if(document.caretPositionFromPoint){var cp=document.caretPositionFromPoint(x,y);if(cp){r=document.createRange();r.setStart(cp.offsetNode,cp.offset)}}}catch(e){}
  if(r&&edB.contains(r.startContainer)){r.collapse(true);var sl=getSelection();sl.removeAllRanges();sl.addRange(r)}else placeCaret(edB,true);
 }
@@ -889,7 +889,7 @@ function placeCaret(el,atEnd){var r=document.createRange();r.selectNodeContents(
 function closestSel(tag){var s=getSelection();if(!s.rangeCount)return null;var n=s.anchorNode;while(n&&n!==edB){if(n.nodeType===1&&n.tagName===tag.toUpperCase())return n;n=n.parentNode}return null}
 function inEd(){var s=getSelection();return s.rangeCount&&edB.contains(s.anchorNode)}
 function saveRange(){var s=getSelection();if(s.rangeCount&&edB.contains(s.anchorNode))savedRange=s.getRangeAt(0).cloneRange()}
-function restoreRange(){if(document.activeElement===edB&&inEd())return;edB.focus();if(savedRange&&edB.contains(savedRange.startContainer)){var s=getSelection();s.removeAllRanges();s.addRange(savedRange)}else placeCaret(edB,true)}
+function restoreRange(){if(document.activeElement===edB&&inEd())return;edB.focus({preventScroll:true});if(savedRange&&edB.contains(savedRange.startContainer)){var s=getSelection();s.removeAllRanges();s.addRange(savedRange)}else placeCaret(edB,true)}
 document.addEventListener('selectionchange',function(){if(cur&&inEd()){saveRange();if(!$('#stp').hidden)syncStyle()}});
 function fixFonts(){
  $$('font[color="#010203"]',edB).forEach(function(f){f.removeAttribute('color');$$('font[color],span',f).forEach(function(x){if(x.tagName==='FONT')x.removeAttribute('color');else x.style.color=''})});
@@ -898,7 +898,9 @@ function fixFonts(){
 }
 function cmd(c,v){restoreRange();try{document.execCommand('styleWithCSS',false,false)}catch(e){}document.execCommand(c,false,v==null?null:v);fixFonts();saveRange();edChanged();syncStyle()}
 function setListClass(tag,cls){var l=closestSel(tag);if(l){l.className=cls}}
-function listCmd(kind){
+function keepView(fn){var sc=$('#edsc'),st=sc.scrollTop,wy=window.scrollY;fn();var back=function(){sc.scrollTop=st;if(window.scrollY!==wy)window.scrollTo(0,wy)};back();requestAnimationFrame(back);setTimeout(back,60);setTimeout(back,250)}
+function listCmd(kind){keepView(function(){listCmd0(kind)})}
+function listCmd0(kind){
  restoreRange();var ul=closestSel('ul'),ol=closestSel('ol'),li=closestSel('li'),s0=getSelection(),col=s0.isCollapsed&&s0.rangeCount,MK='\u2063';
  if(col){try{var mr=s0.getRangeAt(0);mr.insertNode(document.createTextNode(MK));mr.collapse(false);s0.removeAllRanges();s0.addRange(mr)}catch(x){col=false}}
  var want={chk:['UL','chk'],ul:['UL',''],sq:['UL','sq'],ol:['OL',''],al:['OL','al']}[kind];
