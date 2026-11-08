@@ -253,6 +253,13 @@ svg{display:block}
 .cs{flex:none;width:18px;height:22px;border-radius:5px;background:color-mix(in srgb,var(--c) 22%,var(--card));border-left:4px solid var(--c)}
 .chip .dt.cc{background:var(--c)}
 .chip.on .dt.cc{background:#fff}
+.chips{overflow:visible;flex-wrap:nowrap}
+.chip.oth{max-width:130px}
+.chip.oth .ol{overflow:hidden;text-overflow:ellipsis}
+.chip.oth i{flex:none;font-style:normal;display:inline-block;border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid currentColor;margin-left:1px}
+.nav{bottom:-1px}
+.nav:after{content:'';position:absolute;left:0;right:0;top:100%;height:80px;background:var(--bg)}
+html{background:var(--bg)}
 </style>
 </head>
 <body>
@@ -456,8 +463,11 @@ function render(){
  if(selMode)renderSelbar();
 }
 function chipsHtml(f,isT){
- var c=[['all','All'],['p1','Primary'],['p2','Secondary']].concat(S.cats.map(function(x){return ['c:'+x.id,x.name]}));
- return '<div class="chips">'+c.map(function(x){return '<button class="chip'+(f===x[0]?' on':'')+'" data-a="chipf" data-f="'+esc(x[0])+'">'+(x[0]==='p1'?'<span class="dt" style="background:'+(f==='p1'?'#fff':'var(--p1)')+'"></span>':x[0]==='p2'?'<span class="dt" style="background:'+(f==='p2'?'#fff':'var(--p2)')+'"></span>':x[0].indexOf('c:')===0?'<span class="dt cc" style="--c:'+esc((S.cats.filter(function(c){return 'c:'+c.id===x[0]})[0]||{}).col||'#888')+'"></span>':'')+esc(x[1])+'</button>'}).join('')+'<button class="chip add" data-a="addcat" aria-label="Add section">+ Section</button></div>';
+ var c=[['all','All'],['p1','Primary'],['p2','Secondary']];
+ var oc=f.indexOf('c:')===0?S.cats.filter(function(x){return 'c:'+x.id===f})[0]:null,oOn=!!oc||f==='none'||f==='star';
+ var oLbl=oc?oc.name:f==='none'?'No section':f==='star'?'Favourites':'Others';
+ return '<div class="chips">'+c.map(function(x){return '<button class="chip'+(f===x[0]?' on':'')+'" data-a="chipf" data-f="'+esc(x[0])+'">'+(x[0]==='p1'?'<span class="dt" style="background:'+(f==='p1'?'#fff':'var(--p1)')+'"></span>':x[0]==='p2'?'<span class="dt" style="background:'+(f==='p2'?'#fff':'var(--p2)')+'"></span>':'')+esc(x[1])+'</button>'}).join('')+
+  '<button class="chip oth'+(oOn?' on':'')+'" data-a="chipo">'+(oc?'<span class="dt cc" style="--c:'+esc(oc.col||'#888')+'"></span>':'')+'<span class="ol">'+esc(oLbl)+'</span><i></i></button></div>';
 }
 function renderNotes(){
  var l=notesList(),m=$('#main');
@@ -575,6 +585,14 @@ function filterSheetOld(isT){
   sh.addEventListener('click',function(e){var b=e.target.closest('.srow');if(!b)return;if(b.dataset.k==='manage'){closeTop(openCats);return}setFilter(b.dataset.f,isT);closeTop()});
  });
 }
+function othersMenu(a,isT){
+ var cur=isT?tfilt:filt,items=S.cats.map(function(c){return {t:c.name,on:cur==='c:'+c.id,f:function(){setFilter('c:'+c.id,isT)}}});
+ items.push({t:'No section',on:cur==='none',f:function(){setFilter('none',isT)}});
+ if(!isT)items.push({t:'Favourites',on:cur==='star',f:function(){setFilter('star',isT)}});
+ items.push({t:'+ New section',f:function(){addCat(function(c){setFilter('c:'+c.id,isT)})}});
+ items.push({t:'Manage sections',f:openCats});
+ popMenu(a,items);
+}
 function setFilter(f,isT){if(isT){tfilt=f;try{localStorage.setItem('taskist.tf',f)}catch(e){}}else{filt=f;try{localStorage.setItem('taskist.f',f)}catch(e){}}selMode=false;sel={};render()}
 /* ---------- categories ---------- */
 function addCat(cb){promptDlg('New section','','e.g. Gym, Shopping, Ideas',function(v){var c={id:'c_'+uid(),name:v,col:CPAL[S.cats.length%CPAL.length]};S.cats.push(c);save();render();if(cb)cb(c)})}
@@ -661,6 +679,7 @@ document.addEventListener('click',function(e){
   case 'nfilter':if(fpOpen)closeTop();else filterSheet(false);break;
   case 'tfilter':if(fpOpen)closeTop();else filterSheet(true);break;
   case 'chipf':setFilter(el.dataset.f,tab==='todos');break;
+  case 'chipo':othersMenu(el,tab==='todos');break;
   case 'addcat':addCat(function(c){setFilter('c:'+c.id,tab==='todos')});break;
   case 'open':if(selMode){var id=el.dataset.id;if(sel[id])delete sel[id];else sel[id]=1;render();break}var n=S.notes.filter(function(x){return x.id===el.dataset.id})[0];if(!n)break;if(n.del)trashSheet(n);else openNote(n);break;
   case 'topen':if(selMode){var id2=el.dataset.id;if(sel[id2])delete sel[id2];else sel[id2]=1;render();break}todoSheet(S.todos.filter(function(x){return x.id===el.dataset.id})[0]);break;
