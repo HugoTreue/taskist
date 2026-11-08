@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="build" content="20261108-233857">
+<meta name="build" content="20261108-234016">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Taskist</title>
 <meta name="theme-color" content="#000000" id="mtc">
@@ -731,6 +731,7 @@ function openSettings(){
   '<div class="glbl">Appearance</div><div class="grp"><div class="gi"><span>Theme</span><div class="seg">'+[['system','Auto'],['light','White'],['dark','Dark']].map(function(x){return '<button data-th="'+x[0]+'" class="'+(th===x[0]?'on':'')+'">'+x[1]+'</button>'}).join('')+'</div></div><div class="gi"><span>Text size</span><input type="range" id="sFs" min="13" max="22" step="1" value="'+S.set.fs+'" style="margin-left:auto;width:45%;accent-color:var(--ac)"></div><button class="gi" data-k="view"><span>Layout</span><span class="v">'+(S.set.view==='grid'?'Grid':'List')+'</span></button></div>'+
   '<div class="glbl">Organise</div><div class="grp"><button class="gi" data-k="cats"><span>Sections</span><span class="v">'+S.cats.length+'</span></button><button class="gi" data-k="pf"><span>Primary items first</span><span class="tg'+(S.set.prifirst?' on':'')+'"></span></button><button class="gi" data-k="trash"><span>Recently deleted</span><span class="v">'+S.notes.filter(function(n){return n.del}).length+'</span></button></div>'+
   '<div class="glbl">Backup</div><div class="grp"><button class="gi" data-k="exp"><span>Export backup</span><span class="v">.json</span></button><button class="gi" data-k="imp"><span>Restore from backup</span></button></div>'+
+  '<div class="glbl">App</div><div class="grp"><button class="gi" data-k="upd"><span>Check for updates</span><span class="v">'+esc(BUILD)+'</span></button></div>'+
   '<div class="glbl">About</div><div class="grp"><div class="gi"><span>Taskist</span><span class="v">'+S.notes.filter(function(n){return !n.del}).length+' notes · '+S.todos.filter(function(t){return !t.del}).length+' to-dos</span></div><div class="gi" style="color:var(--mu);font-size:14px;line-height:1.45">Everything is saved on this device. Use Export backup to move it to another phone.</div></div></div>'}
  draw();var done=false;function rm(){if(done)return;done=true;outRm(pg);render()}pushLayer(rm);
  pg.addEventListener('input',function(e){if(e.target.id==='sFs'){S.set.fs=+e.target.value;applyTheme();save()}});
@@ -744,6 +745,7 @@ function openSettings(){
   else if(k==='trash'){closeTop(function(){if(tab!=='notes'){tab='notes'}setFilter('trash')})}
   else if(k==='exp'){exportData()}
   else if(k==='imp'){$('#fImp').click()}
+  else if(k==='upd'){toast('Updating…');try{sessionStorage.removeItem('taskist.upd')}catch(x){}BUILD='force';doUpdate()}
  });
 }
 function exportData(){try{persist();var b=new Blob([JSON.stringify(S)],{type:'application/json'}),u=URL.createObjectURL(b),a=document.createElement('a'),d=new Date();a.href=u;a.download='taskist-backup-'+d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'.json';document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(u);a.remove()},1500);toast('Backup downloaded')}catch(e){toast('Could not export')}}
@@ -1059,7 +1061,7 @@ var BUILD=(document.querySelector('meta[name=build]')||{}).content||'',updPendin
 function doUpdate(){
  if(!$('#ed').hidden||!$('#dw').hidden){updPending=true;return}
  try{if(sessionStorage.getItem('taskist.upd')===BUILD)return;sessionStorage.setItem('taskist.upd',BUILD)}catch(e){}
- Promise.resolve(saveT?persist():0).then(function(){return navigator.serviceWorker&&navigator.serviceWorker.getRegistrations?navigator.serviceWorker.getRegistrations().then(function(r){return Promise.all(r.map(function(x){return x.update().catch(function(){})}))}):0}).then(function(){return window.caches?caches.keys().then(function(k){return Promise.all(k.map(function(x){return caches.delete(x)}))}):0}).then(function(){location.reload()},function(){location.reload()});
+ Promise.resolve(saveT?persist():0).then(function(){return navigator.serviceWorker&&navigator.serviceWorker.getRegistrations?navigator.serviceWorker.getRegistrations().then(function(r){return Promise.all(r.map(function(x){return x.update().catch(function(){})}))}):0}).then(function(){return window.caches?caches.keys().then(function(k){return Promise.all(k.map(function(x){return caches.delete(x)}))}):0}).then(function(){return fetch(location.pathname,{cache:'reload'}).catch(function(){})}).then(function(){location.replace(location.pathname+'?u='+Date.now())},function(){location.reload()});
 }
 function checkUpdate(){
  if(updChecking||location.protocol.indexOf('http')!==0||!BUILD)return;updChecking=true;
