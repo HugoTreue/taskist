@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="build" content="20261108-234709">
+<meta name="build" content="20261108-234815">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Taskist</title>
 <meta name="theme-color" content="#000000" id="mtc">
@@ -330,6 +330,7 @@ html{background:var(--bg)}
 input:focus-visible,textarea:focus-visible,.edb:focus-visible,.edt:focus-visible{outline:none}
 @media (prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 .tdown{opacity:.55}
+.selbar .sl{max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -567,10 +568,15 @@ function renderCards(l){
 }
 function renderSelbar(){
  var n=Object.keys(sel).length,b=$('#selbar'),tr=tab==='notes'&&filt==='trash';
- var items=tab==='todos'?[['tsdone','Done'],['spri','Priority'],['smove','Move'],['sdel','Delete']]:tr?[['srest','Restore'],['sdelf','Delete']]:[['sstar','Star'],['spri','Priority'],['smove','Move'],['sdel','Delete']];
+ var src=tab==='notes'?S.notes:S.todos,its=src.filter(function(x){return sel[x.id]}),all=function(f){return its.length>0&&its.every(f)};
+ var allStar=all(function(x){return x.star}),allDone=all(function(x){return x.done}),p0=its.length?its[0].pri||0:0,samePri=all(function(x){return (x.pri||0)===p0})&&p0,c0=its.length?its[0].cat||'':'',sameCat=all(function(x){return (x.cat||'')===c0})&&catName(c0);
+ var priL=samePri===1?'Primary':samePri===2?'Secondary':'Priority',catL=sameCat?catName(c0):'Move';
+ var items=tab==='todos'?[['tsdone',allDone?'Not done':'Done'],['spri',priL],['smove',catL],['sdel','Delete']]:tr?[['srest','Restore'],['sdelf','Delete']]:[['sstar',allStar?'Unstar':'Star'],['spri',priL],['smove',catL],['sdel','Delete']];
  var ics={sstar:'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M12 2.8l2.8 5.8 6.4.8-4.7 4.4 1.2 6.3L12 17l-5.7 3.1 1.2-6.3L2.8 9.4l6.4-.8z"/></svg>',spri:'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg>',smove:'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>',sdel:'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></svg>',srest:'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 0 2.5-5.8M4 4v4h4"/></svg>',tsdone:IC.ok.replace('width="30" height="30"','width="24" height="24"')};
  ics.sdelf=ics.sdel;
- b.innerHTML=items.map(function(x){return '<button data-a="'+x[0]+'"'+(n?'':' disabled')+'>'+ics[x[0]]+'<span>'+x[1]+'</span></button>'}).join('');
+ if(allStar)ics.sstar='<svg width="24" height="24" viewBox="0 0 24 24" fill="#f4b63d" stroke="#f4b63d" stroke-width="1.7" stroke-linejoin="round"><path d="M12 2.8l2.8 5.8 6.4.8-4.7 4.4 1.2 6.3L12 17l-5.7 3.1 1.2-6.3L2.8 9.4l6.4-.8z"/></svg>';
+ var pcol=samePri===1?' style="color:var(--p1)"':samePri===2?' style="color:var(--p2)"':'';
+ b.innerHTML=items.map(function(x){return '<button data-a="'+x[0]+'"'+(n?'':' disabled')+(x[0]==='spri'?pcol:'')+'>'+ics[x[0]]+'<span class="sl">'+esc(x[1])+'</span></button>'}).join('');
 }
 /* ---------- to-dos ---------- */
 function todoList(){
@@ -762,7 +768,7 @@ function selAct(a,btn){
  else if(a==='sdel'){if(tab==='todos'){delTodos(ids);return}var snap=JSON.stringify(S.notes);items.forEach(function(x){x.del=n});save();selMode=false;sel={};render();toast(ids.length===1?'Moved to Recently deleted':ids.length+' notes moved to Recently deleted',function(){S.notes=JSON.parse(snap);save();render()})}
  else if(a==='srest'){items.forEach(function(x){x.del=0});save();selMode=false;sel={};render();toast('Restored')}
  else if(a==='sdelf'){confirmDlg('Delete for good?',ids.length+(ids.length===1?' note':' notes')+' will be gone forever.','Delete',function(){S.notes=S.notes.filter(function(x){return ids.indexOf(x.id)<0});save();selMode=false;sel={};render()})}
- else if(a==='tsdone'){items.forEach(function(x){x.done=true;x.doneAt=n});save();selMode=false;sel={};render()}
+ else if(a==='tsdone'){var ad=items.every(function(x){return x.done});items.forEach(function(x){x.done=!ad;x.doneAt=ad?0:n});save();selMode=false;sel={};render();toast(ad?'Marked not done':'Marked done')}
 }
 /* ---------- long press ---------- */
 var lpT=null,lpX=0,lpY=0;
