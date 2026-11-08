@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="build" content="20261108-234016">
+<meta name="build" content="20261108-234253">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Taskist</title>
 <meta name="theme-color" content="#000000" id="mtc">
@@ -329,6 +329,7 @@ html{background:var(--bg)}
 :focus-visible{outline:2px solid var(--ac);outline-offset:2px;border-radius:10px}
 input:focus-visible,textarea:focus-visible,.edb:focus-visible,.edt:focus-visible{outline:none}
 @media (prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+.tdown{opacity:.55}
 </style>
 </head>
 <body>
@@ -940,6 +941,12 @@ $('#stp').addEventListener('change',function(e){if(e.target.id==='stFs'){curFS=+
 function toggleStyle(on){var p=$('#stp');if(on==null)on=p.hidden;if(on){var tt=$('.toast');if(tt)tt.remove()}p.hidden=!on;$('#bSty').classList.toggle('on',on);if(on)drawStyle()}
 /* editor top + bottom actions */
 $('#ed').addEventListener('pointerdown',function(e){var b=e.target.closest('.edbar button,[data-a=undo],[data-a=redo]');if(b)e.preventDefault()});
+/* keep the keyboard open: on touch, tapping a toolbar button must not take focus away from the note */
+var keepSel='#edbar button,#stp button,[data-a=undo],[data-a=redo]',tBtn=null,tX=0,tY=0;
+$('#ed').addEventListener('touchstart',function(e){var b=e.target.closest(keepSel);if(!b)return;var ae=document.activeElement;if(ae!==edB&&ae!==edT)return;e.preventDefault();tBtn=b;tX=e.touches[0].clientX;tY=e.touches[0].clientY;b.classList.add('tdown')},{passive:false});
+$('#ed').addEventListener('touchmove',function(e){if(tBtn&&(Math.abs(e.touches[0].clientX-tX)>10||Math.abs(e.touches[0].clientY-tY)>10)){tBtn.classList.remove('tdown');tBtn=null}},{passive:true});
+$('#ed').addEventListener('touchend',function(e){if(!tBtn)return;var b=tBtn;tBtn=null;b.classList.remove('tdown');e.preventDefault();b.click()},{passive:false});
+$('#ed').addEventListener('touchcancel',function(){if(tBtn){tBtn.classList.remove('tdown');tBtn=null}});
 $('#ed').addEventListener('click',function(e){
  var el=e.target.closest('[data-a]');if(!el)return;var a=el.dataset.a;
  if(a==='edback'){closeTop()}
