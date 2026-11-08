@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="build" content="20261108-233425">
+<meta name="build" content="20261108-233857">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Taskist</title>
 <meta name="theme-color" content="#000000" id="mtc">
@@ -151,7 +151,7 @@ svg{display:block}
 .edt{width:100%;border:0;outline:0;background:none;font-size:26px;font-weight:600;padding:4px 0}
 .edt::placeholder{color:var(--mu);opacity:.75}
 .edm{display:flex;align-items:center;flex-wrap:wrap;gap:8px;color:var(--mu);font-size:14px;margin:6px 0 16px}
-.edm .chip{background:var(--card);color:var(--mu);font-size:13.5px;height:30px}
+.edm .chip{background:var(--card);color:var(--mu);font-size:13px;height:26px;padding:0 11px}
 .edm .chip.p1{background:var(--p1);color:var(--p1t)}
 .edm .chip.p2{background:var(--p2);color:var(--p2t)}
 .edm .chip i{font-style:normal;display:inline-block;border-left:5px solid transparent;border-right:5px solid transparent;border-top:7px solid currentColor;margin-left:2px}
@@ -170,8 +170,8 @@ svg{display:block}
 .edb img.hw{border-radius:0;max-height:none}
 .edb img.cardimg{border-radius:16px;box-shadow:0 6px 18px rgba(0,0,0,.35)}
 .edb img.pick{outline:3px solid var(--ac);outline-offset:2px}
-.edbar{position:fixed;left:0;right:0;bottom:var(--kb);z-index:31;background:inherit;display:flex;justify-content:space-around;padding:6px 0 calc(8px + env(safe-area-inset-bottom));max-width:680px;margin:0 auto}
-.edbar button{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12.5px;min-width:64px}.edbar svg{width:26px;height:26px}.edtop .ic svg{max-width:24px;max-height:24px}
+.edbar{position:fixed;left:0;right:0;bottom:var(--kb);z-index:31;background:inherit;display:flex;justify-content:space-around;padding:4px 0 calc(5px + env(safe-area-inset-bottom));max-width:680px;margin:0 auto}
+.edbar button{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;min-width:60px}.edbar svg{width:22px;height:22px}.edtop .ic svg{max-width:22px;max-height:22px}
 .edbar button.on{color:var(--ac)}
 /* style panel */
 .stp{position:fixed;left:0;right:0;bottom:var(--kb);z-index:32;background:inherit;padding:10px 20px calc(12px + env(safe-area-inset-bottom));max-width:680px;margin:0 auto;border-top:1px solid var(--ln);animation:su .2s}
@@ -274,8 +274,8 @@ html{background:var(--bg)}
 .ed.view #edbar,.ed:not(.view) #vbar{display:none}
 .ed.view .edb{caret-color:transparent;-webkit-user-select:text;user-select:text}
 .ed.view .edt{pointer-events:auto}
-.vbar .vi{display:grid;place-items:center;width:26px;height:26px}
-.vbar .vi svg{width:24px;height:24px}
+.vbar .vi{display:grid;place-items:center;width:22px;height:22px}
+.vbar .vi svg{width:21px;height:21px}
 #vFav.on{color:#f4b63d}
 .pop button.hl{background:rgba(47,123,246,.32);color:#5b9dff;border-radius:14px;margin:0 6px;width:calc(100% - 12px);padding-left:16px}
 :root[data-th=light] .pop button.hl{background:rgba(37,111,255,.12);color:var(--ac)}
@@ -414,8 +414,8 @@ var IC={
  todoOn:'<svg width="34" height="34" viewBox="0 0 34 34"><circle cx="17" cy="17" r="15" fill="currentColor"/><path d="M10.5 17.5l4.5 4.5 8.5-9" stroke="#fff" stroke-width="2.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
  todoOff:'<svg width="34" height="34" viewBox="0 0 34 34"><circle cx="17" cy="17" r="15" fill="currentColor" opacity=".35"/><path d="M10.5 17.5l4.5 4.5 8.5-9" stroke="currentColor" stroke-width="2.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
  back:'<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12H4M10 5l-7 7 7 7"/></svg>',
- undo:'<svg width="30" height="30" viewBox="0 0 30 30" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 9h12a5 5 0 0 1 0 10H8"/><path d="M11 6L8 9l3 3"/></svg>',
- redo:'<svg width="30" height="30" viewBox="0 0 30 30" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11H10a5 5 0 0 0 0 10h12"/><path d="M19 8l3 3-3 3"/></svg>',
+ undo:'<svg width="30" height="30" viewBox="0 0 30 30" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8 9h12a5 5 0 0 1 0 10H8"/><path d="M11 6L8 9l3 3"/></svg>',
+ redo:'<svg width="30" height="30" viewBox="0 0 30 30" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11H10a5 5 0 0 0 0 10h12"/><path d="M19 8l3 3-3 3"/></svg>',
  ok:'<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>',
  more:'<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="12" cy="19" r="1.9"/></svg>',
  chk:'<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M7.5 12.5l3 3 6-6.5"/></svg>',
