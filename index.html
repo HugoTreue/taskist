@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="build" content="20261109-135440">
+<meta name="build" content="20261109-140813">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Taskist</title>
 <meta name="theme-color" content="#000000" id="mtc">
@@ -104,7 +104,7 @@ svg{display:block}
 .scrim{position:fixed;inset:0;z-index:50;background:transparent}
 .scrim.dim{background:var(--scrim);animation:fd .18s}
 @keyframes fd{from{opacity:0}}
-.pop{position:fixed;z-index:51;min-width:180px;max-width:calc(100vw - 32px);background:var(--pop);border-radius:20px;padding:6px 0;box-shadow:var(--sh);animation:pp .16s ease-out;transform-origin:top right}
+.pop{position:fixed;z-index:55;min-width:180px;max-width:calc(100vw - 32px);background:var(--pop);border-radius:20px;padding:6px 0;box-shadow:var(--sh);animation:pp .16s ease-out;transform-origin:top right}
 @keyframes pp{from{opacity:0;transform:scale(.92)}}
 .pop button{display:flex;align-items:center;justify-content:space-between;gap:14px;width:100%;text-align:left;font-size:16px;padding:13px 22px;position:relative}
 .pop button+button:before{content:'';position:absolute;top:0;left:22px;right:22px;height:1px;background:var(--ln)}
@@ -498,6 +498,8 @@ i.dh{width:5px;height:5px;border-radius:50%;display:inline-block;border:1px soli
 .sw:active{transform:scale(.9)}
 .sw.on:after{content:'';position:absolute;inset:-4px;border-radius:50%;box-shadow:0 0 0 2px var(--c)}
 .sw.on:before{content:'';position:absolute;left:50%;top:50%;width:12px;height:7px;border:solid #fff;border-width:0 0 2.4px 2.4px;transform:translate(-50%,-65%) rotate(-45deg)}
+.qdot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;flex:none}
+.qcar{width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid currentColor;margin-left:5px;opacity:.7}
 /* calendar */
 .cweek{gap:4px}
 .cday{flex:1 0 auto;flex-direction:column;height:62px;min-width:38px;padding:0 4px;gap:1px;border-radius:16px}
@@ -842,7 +844,7 @@ function todoRow(t){
 }
 function todoSheet(t){
  var isNew=!t,o=t?Object.assign({},t):{id:uid(),t:'',done:false,cat:tfilt.indexOf('c:')===0?tfilt.slice(2):'',pri:tfilt==='p1'?1:tfilt==='p2'?2:0,due:0,created:Date.now()};
- function opts(){return '<div class="sopts"><button class="chip'+(o.due?' on':'')+'" data-k="due">'+(o.due?esc(fdue(o.due)):'Remind me')+'</button><button class="chip'+(o.cat&&catName(o.cat)?' on':'')+'" data-k="cat">'+(catName(o.cat)||'Section')+'</button><button class="chip'+(o.pri?' on':'')+(o.pri===1?' cp1':o.pri===2?' cp2':'')+'" data-k="pri">'+(o.pri===1?'Primary':o.pri===2?'Secondary':'Priority')+'</button></div>'}
+ function opts(){return '<div class="sopts"><button class="chip'+(o.due?' on':'')+'" data-k="due">'+(o.due?esc(fdue(o.due)):'Remind me')+'</button><button class="chip'+(o.cat&&catName(o.cat)?' on':'')+'" data-k="cat">'+(o.cat&&catName(o.cat)?'<i class="qdot" style="background:'+catCol(o.cat)+'"></i>'+esc(catName(o.cat)):'Section')+'<span class="qcar"></span></button><button class="chip'+(o.pri?' on':'')+(o.pri===1?' cp1':o.pri===2?' cp2':'')+'" data-k="pri">'+(o.pri===1?'Primary':o.pri===2?'Secondary':'Priority')+'</button></div>'}
  sheet('<h3>'+(isNew?'New to-do':'Edit to-do')+'</h3><div class="sform"><textarea id="tdI" rows="2" maxlength="500" placeholder="What do you need to do?">'+esc(o.t)+'</textarea><div id="tdO">'+opts()+'</div><input type="datetime-local" id="tdDue" style="position:absolute;opacity:0;pointer-events:none;width:1px;height:1px"><div class="sbtns">'+(isNew?'':'<button class="btn dan" data-k="del">Delete</button><span style="flex:1"></span>')+'<button class="btn" data-x>Cancel</button><button class="btn pri" data-k="save">Save</button></div></div>',function(sh){
   var ta=$('#tdI',sh),dd=$('#tdDue',sh);setTimeout(function(){ta.focus()},80);
   ta.onkeydown=function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();doSave()}};
@@ -853,7 +855,7 @@ function todoSheet(t){
    if(k==='save')doSave();
    else if(k==='del'){closeTop(function(){delTodos([t.id])})}
    else if(k==='pri'){o.pri=(o.pri+1)%3;redo()}
-   else if(k==='cat'){var ids=[''].concat(S.cats.map(function(c){return c.id})),i=ids.indexOf(o.cat||'');o.cat=ids[(i+1)%ids.length];redo()}
+   else if(k==='cat'){catPop(b,o.cat,function(c){o.cat=c;redo()})}
    else if(k==='due'){if(o.due){popMenu(b,[{t:'Change time',f:function(){pickDue()}},{t:'Remove reminder',dan:1,f:function(){o.due=0;redo()}}])}else pickDue()}
   });
   function pickDue(){var d=new Date(Date.now()+36e5);d.setMinutes(0,0,0);if(o.due)d=new Date(o.due);dd.value=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes());try{dd.showPicker()}catch(x){dd.style.cssText='display:block;width:100%;margin:6px 0;padding:12px;border-radius:14px;border:0;background:var(--card2)';dd.focus()}}
@@ -862,7 +864,7 @@ function todoSheet(t){
 function quickAdd(due0){
  var o={pri:tfilt==='p1'?1:tfilt==='p2'?2:0,due:due0||0,cat:tfilt.indexOf('c:')===0?tfilt.slice(2):''};
  var sc=document.createElement('div');sc.className='scrim dim';sc.style.background='rgba(0,0,0,.25)';var q=document.createElement('div');q.className='qa';
- function bar(){return '<button class="qb'+(o.due?' on':'')+'" data-q="due" aria-label="Reminder"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="13" r="7.5"/><path d="M12 9v4l2.5 2M4.5 4.5L7 2.5M19.5 4.5L17 2.5"/></svg>'+(o.due?esc(fdue(o.due)):'')+'</button><button class="qb'+(o.pri===1?' p1':o.pri===2?' p2':'')+'" data-q="pri" aria-label="Priority"><b>!</b>'+(o.pri===1?'Primary':o.pri===2?'Secondary':'')+'</button>'+(o.cat&&catName(o.cat)?'<span class="qb on">'+esc(catName(o.cat))+'</span>':'')+'<button class="qs" data-q="save" disabled>SAVE</button>'}
+ function bar(){return '<button class="qb'+(o.due?' on':'')+'" data-q="due" aria-label="Reminder"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="13" r="7.5"/><path d="M12 9v4l2.5 2M4.5 4.5L7 2.5M19.5 4.5L17 2.5"/></svg>'+(o.due?esc(fdue(o.due)):'')+'</button><button class="qb'+(o.pri===1?' p1':o.pri===2?' p2':'')+'" data-q="pri" aria-label="Priority"><b>!</b>'+(o.pri===1?'Primary':o.pri===2?'Secondary':'')+'</button>'+'<button class="qb'+(o.cat&&catName(o.cat)?' on':'')+'" data-q="cat" aria-label="Section">'+(o.cat&&catName(o.cat)?'<i class="qdot" style="background:'+(catCol(o.cat))+'"></i>'+esc(catName(o.cat)):'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2.2h7a2 2 0 0 1 2 2v7.8a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/></svg>')+'<span class="qcar"></span></button><button class="qs" data-q="save" disabled>SAVE</button>'}
  q.innerHTML='<input type="text" id="qaI" placeholder="To-do" maxlength="500" autocomplete="off"><div class="qr" id="qaR">'+bar()+'</div><input type="datetime-local" id="qaD" style="position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;bottom:0">';
  document.body.appendChild(sc);document.body.appendChild(q);var inp=$('#qaI',q),dd=$('#qaD',q);
  function redo(){$('#qaR',q).innerHTML=bar();$('[data-q=save]',q).disabled=!inp.value.trim()}
@@ -876,6 +878,7 @@ function quickAdd(due0){
  q.addEventListener('click',function(e){var b=e.target.closest('[data-q]');if(!b)return;var k=b.dataset.q;
   if(k==='save')doSave();
   else if(k==='pri'){o.pri=(o.pri+1)%3;redo()}
+  else if(k==='cat'){catPop(b,o.cat,function(c){o.cat=c;redo();setTimeout(function(){inp.focus()},30)})}
   else if(k==='due'){if(o.due){o.due=0;redo();return}var d=new Date(Date.now()+36e5);d.setMinutes(0,0,0);dd.value=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes());try{dd.showPicker()}catch(x){dd.style.cssText='display:block;width:100%;margin-top:8px;padding:10px;border-radius:14px;border:0;background:var(--card)';dd.focus()}}
  });
 }
@@ -1298,6 +1301,7 @@ function noteTxt(){return (edT.value?edT.value+'\n\n':'')+noteText({html:edB.inn
 function shareNote(){var txt=noteTxt();if(navigator.share)navigator.share({title:edT.value||'Note',text:txt}).catch(function(){});else{try{navigator.clipboard.writeText(txt);toast('Copied to clipboard')}catch(e){toast('Sharing is not available here')}}}
 function delNote(){var n=cur,isNew=!!n._new;if(n.isTpl){delTpl(n);return}closeTop(function(){if(isNew)return;n.del=Date.now();save();render();toast('Moved to Recently deleted',function(){n.del=0;save();render()})})}
 function vMore(a){popMenu(a,tplItems().concat([{t:'Primary',dot:'var(--p1)',cls:'sp1',on:cur.pri===1,f:function(){cur.pri=cur.pri===1?0:1;edMeta();edChanged()}},{t:'Secondary',dot:'var(--p2)',cls:'sp2',on:cur.pri===2,f:function(){cur.pri=cur.pri===2?0:2;edMeta();edChanged()}},{t:'Move to section',f:function(){catPop($('[data-a=edcat]'),cur.cat,function(c){cur.cat=c;edMeta();edChanged()})}},{t:'Page background',f:function(){setMode(false);toggleStyle(true)}},{t:'Copy text',f:function(){try{navigator.clipboard.writeText(noteTxt()).then(function(){toast('Copied')},function(){toast('Could not copy')})}catch(e){toast('Could not copy')}}}]))}
+function catCol(id){var c=S.cats.filter(function(x){return x.id===id})[0];return c&&c.col||'#8e8e93'}
 function catPop(anchor,cur0,cb){
  var items=S.cats.map(function(c){return {t:c.name,tab:c.col||'#888',hl:cur0===c.id,f:function(){cb(c.id)}}});
  items.push({t:'No category',ic:'<span class="pi">'+'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><rect x="4.5" y="3" width="15" height="18" rx="2.5"/><path d="M8 3v18"/></svg></span>',hl:!cur0||!catName(cur0),f:function(){cb('')}});
