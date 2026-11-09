@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="build" content="20261109-073800">
+<meta name="build" content="20261109-074358">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Taskist</title>
 <meta name="theme-color" content="#000000" id="mtc">
@@ -440,7 +440,10 @@ input:focus-visible,textarea:focus-visible,.edb:focus-visible,.edt:focus-visible
 .cday.on span{color:#fff}
 .cday.tdy:not(.on) b{color:var(--ac)}
 .cnav{padding:0 4px;background:none;color:var(--mu);height:62px}
-.chips.cweek{overflow:visible;flex-wrap:nowrap}
+.chips.cweek{overflow:hidden;flex-wrap:nowrap;margin:0 0 12px;padding:0;gap:3px}
+.cweek .cday{flex:1 1 0;min-width:0;padding:0}
+.cweek .cnav{flex:none;width:24px;min-width:0;padding:0;justify-content:center}
+html,body{overflow-x:clip}
 i.dg,i.dt2,i.dn2{width:5px;height:5px;border-radius:50%;display:inline-block;border:1px solid}
 i.dg{border-color:var(--p1)}i.dg.f{background:var(--p1)}
 i.dt2{border-color:var(--ac)}i.dt2.f{background:var(--ac)}
@@ -1245,7 +1248,7 @@ var TI={
  gym:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="9" width="3" height="6" rx="1"/><rect x="18.5" y="9" width="3" height="6" rx="1"/><rect x="5.5" y="6.5" width="3" height="11" rx="1.2"/><rect x="15.5" y="6.5" width="3" height="11" rx="1.2"/><path d="M8.5 12h7"/></svg>',
  gymOn:'<svg viewBox="0 0 24 24" fill="currentColor"><rect x="2" y="8.5" width="3.6" height="7" rx="1.2"/><rect x="18.4" y="8.5" width="3.6" height="7" rx="1.2"/><rect x="5" y="5.5" width="4" height="13" rx="1.6"/><rect x="15" y="5.5" width="4" height="13" rx="1.6"/><rect x="8.5" y="10.8" width="7" height="2.4" rx="1"/></svg>',
  food:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3v7a2 2 0 0 0 2 2v9M11 3v7a2 2 0 0 1-2 2M9 3v6"/><path d="M17 21V3c-2 1.5-3 4-3 7v3h3"/></svg>',
- foodOn:'<svg viewBox="0 0 24 24"><path d="M7 3v7a2 2 0 0 0 2 2v9M11 3v7a2 2 0 0 1-2 2M9 3v6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M17.5 21.5V2.5c-2.6 1.6-4 4.5-4 7.8V14h4z" fill="currentColor"/></svg>',
+ foodOn:'<svg viewBox="0 0 24 24"><path d="M7 3v7a2 2 0 0 0 2 2v9M11 3v7a2 2 0 0 1-2 2M9 3v6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M17.5 2.5c-2.6 1.6-4 4.5-4 7.8V14h4z" fill="currentColor"/><path d="M17.5 3v18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>',
  drop:'<svg viewBox="0 0 24 24"><path d="M12 3s6 6.4 6 11a6 6 0 0 1-12 0c0-4.6 6-11 6-11z"/></svg>',
  play:'<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l10.5-6.5z"/></svg>',
  chevL:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>',
@@ -1452,7 +1455,7 @@ function renderCal(){
  if(o.notes.length)h+='<div class="tgh">NOTES</div><div class="cards">'+o.notes.map(function(nn){var f=noteInfo(nn);return '<div class="card'+(nn.star&&!nn.bg?' st':'')+'" data-a="open" data-id="'+nn.id+'" role="button" tabindex="0"><div class="cb"><div class="ct"><span>'+esc(f.title)+'</span></div><div class="cm">'+(nn.pri===1?'<span class="pb p1">Primary</span>':nn.pri===2?'<span class="pb p2">Secondary</span>':'')+'<span class="tx">'+esc(fdate(nn.updated))+(f.snip?' | '+esc(f.snip):'')+'</span></div></div></div>'}).join('')+'</div>';
  if(!n)h+='<div class="empty">Nothing on this day.<br>Tap + to add a to-do.</div>';
  m.innerHTML=h;
- var cw=$('.cweek .cday.on');if(cw&&cw.scrollIntoView)try{cw.scrollIntoView({block:'nearest',inline:'center'})}catch(x){}
+ 
 }
 function calPanel(){
  if(fpOpen)return;calMonth=calMonth||calSel.slice(0,7);window.scrollTo(0,0);
