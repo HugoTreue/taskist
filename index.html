@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="build" content="20261109-153736">
+<meta name="build" content="20261109-191857">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Taskist</title>
 <meta name="theme-color" content="#000000" id="mtc">
@@ -1192,7 +1192,7 @@ function openNote(n){if(n&&n.lock&&!n._new&&!lockOpen()){unlockNotes().then(func
 function openNote0(n){
  var isNew=!n||!!n._new;
  if(!n){var t=Date.now();n={id:uid(),title:'',html:'',cat:filt.indexOf('c:')===0?filt.slice(2):'',star:filt==='star'?1:0,pri:filt==='p1'?1:filt==='p2'?2:0,bg:0,created:t,updated:t,del:0,_new:1}}
- cur=n;edDirty=false;savedRange=null;edT.value=n.title||'';edB.innerHTML=n.html||'';migrateSizes();habitMarks();
+ cur=n;edDirty=false;savedRange=null;edT.value=n.title||'';fitTitle();requestAnimationFrame(fitTitle);edB.innerHTML=n.html||'';migrateSizes();habitMarks();
  var edWasHidden=$('#ed').hidden;$('#ed').className='ed nb'+(n.bg||0);if(edWasHidden)$('#ed').style.zIndex=topZ();/*reset anim*/$('#ed').hidden=false;$('#stp').hidden=true;$('#bSty').classList.remove('on');
  edMeta();document.body.style.overflow='hidden';
  pushLayer(closeNote);
@@ -1221,7 +1221,7 @@ function closeNote(){
  if(cur&&!cur._new&&noteEmpty()){var arr0=cur.isTpl?S.tpls:S.notes,idx=arr0.indexOf(cur);if(idx>-1){arr0.splice(idx,1);save()}}
  if(window.TKSYNC)TKSYNC.soon();var edEl=$('#ed');edEl.classList.add('eout');$('#stp').hidden=true;document.body.style.overflow='';cur=null;edB.blur();render();if(pgRedraw)pgRedraw();setTimeout(function(){if(!cur){edEl.hidden=true}edEl.classList.remove('eout')},170);if(updPending){updPending=false;setTimeout(doUpdate,300)}
 }
-edT.addEventListener('input',edChanged);
+edT.addEventListener('input',function(){fitTitle();edChanged()});window.addEventListener('resize',function(){if(cur)fitTitle()});
 edT.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();edB.focus();placeCaret(edB,true)}});
 edB.addEventListener('input',function(){fixFonts();edChanged()});
 var pendFS=null,edComp=false;
@@ -1526,7 +1526,12 @@ function habitsCat(){var c=S.cats.filter(function(x){return x.name.toLowerCase()
 function stripDone(h){return (h||'').replace(/ data-done="1"/g,'').replace(/ data-st(o)?="[^"]*"/g,'')}
 function shortDate(k){var d=dkDate(k);return WDS[d.getDay()]+' '+d.getDate()+' '+MON[d.getMonth()].slice(0,3)}
 function tplName(t){return t.title||noteInfo(t).title||'Untitled template'}
-function genTitle(t,k){return (t.title||'Habits')+' · '+shortDate(k)}
+function fitTitle(){var e=edT;if(!e)return;e.style.fontSize='';var fs=parseFloat(getComputedStyle(e).fontSize),g=0;while(e.scrollWidth>e.clientWidth+1&&fs>20&&g++<20){fs-=1;e.style.fontSize=fs+'px'}}
+function fullDate(k){var d=dkDate(k);return WDL[d.getDay()]+' '+d.getDate()+' '+MON[d.getMonth()]+' '+d.getFullYear()}
+function genTitle(t,k){return t.dt?fullDate(k):(t.title||'Habits')+' · '+shortDate(k)}
+function plainDaily(n){var t=n&&n.tid&&tplById(n.tid);return !!(t&&t.dt)}
+var DAILY_HTML='<div>Tasks</div><ul class="chk"><li><br></li></ul>';
+function newDailyTasks(open){var n0=Date.now(),t={id:'t_'+uid(),title:'Daily tasks',html:DAILY_HTML,cat:'',pri:0,bg:0,rep:[0,1,2,3,4,5,6],dt:1,isTpl:1,created:n0,updated:n0,del:0};S.tpls.unshift(t);save();ensureDaily();if(open){openNote(t);toast('Each day gets a note titled with the date')}return t}
 function isPristine(n){return n.updated===n.created&&!/data-done="1"/.test(n.html||'')}
 function habKey(li){return (li.textContent||'').replace(/[\u200b\u2063]/g,'').replace(/\s+/g,' ').trim().toLowerCase()}
 function habMap(n){var c=habC[n.id];if(c&&c.h===n.html)return c.r;var d=document.createElement('div');d.innerHTML=n.html||'';var m={},o=[],lb={};$$('ul.chk>li',d).forEach(function(li){var k=habKey(li);if(k&&!(k in m)){m[k]=li.getAttribute('data-done')==='1';o.push(k);lb[k]=li.textContent.replace(/[\u200b\u2063]/g,'').trim()}});var r={m:m,o:o,lb:lb};habC[n.id]={h:n.html,r:r};return r}
@@ -1549,7 +1554,7 @@ function calHabits(k,o){var h='',t=dk();
  return h?'<div class="tgh">HABITS</div><div class="tlist">'+h+'</div>':''}
 function habitMarks(){var x=$('#edX');if(!x)return;if(!cur){x.hidden=true;return}var html='';
  if(cur.isTpl){var rp=(cur.rep||[]).length;html='<div class="tpb"><span class="tpt">TEMPLATE</span><span class="tps">'+esc(repLabel(cur.rep))+'</span></div><div class="tpa">'+(rp&&!cur._new?'<button class="lnk" data-a="hstats2">Stats</button>':'')+'<button class="lnk" data-a="trep">Repeat</button>'+(cur._new?'':'<button class="lnk" data-a="tuse">Use</button>')+'</div>'}
- else if(cur.tid&&cur.day){var t=tplById(cur.tid)||{id:cur.tid,rep:[]},days=habDays(cur.tid),tot=0,dn=0,best=0;
+ else if(cur.tid&&cur.day&&!plainDaily(cur)){var t=tplById(cur.tid)||{id:cur.tid,rep:[]},days=habDays(cur.tid),tot=0,dn=0,best=0;
   $$('ul.chk>li',edB).forEach(function(li){var k=habKey(li),v='';if(k){tot++;var done=li.getAttribute('data-done')==='1';if(done)dn++;var sb=streakBefore(t,k,cur.day,days),st=sb+(done?1:0);if(st>best)best=st;if(st)v=st+(st===1?' day':' days');if(done&&st>=1)li.setAttribute('data-sto','');else li.removeAttribute('data-sto')}
    if(li.getAttribute('data-st')!==(v||null)){if(v)li.setAttribute('data-st',v);else li.removeAttribute('data-st')}});
   var pc=tot?Math.round(dn/tot*100):0;
@@ -1573,7 +1578,7 @@ function repeatSheet(t){var r=(t.rep||[]).slice();
  function body(){return '<h3>Repeat “'+esc(tplName(t))+'”</h3><div class="rdays">'+DOWS.map(function(d){return '<button class="rday'+(r.indexOf(d)>-1?' on':'')+'" data-d="'+d+'" aria-label="'+WDL[d]+'">'+WDS[d].slice(0,1)+'</button>'}).join('')+'</div><div class="rq"><button class="chip'+(r.length===7?' on':'')+'" data-q="all">Every day</button><button class="chip'+(repLabel(r)==='Weekdays'?' on':'')+'" data-q="wk">Weekdays</button><button class="chip'+(!r.length?' on':'')+'" data-q="off">Off</button></div><p class="rnote">'+(r.length?'A fresh copy goes into <b>'+esc(catName(t.cat)||'Habits')+'</b> each morning ('+esc(repLabel(r).toLowerCase())+'). Tick lines off and Taskist records streaks for each one.':'Pick days and Taskist will add a fresh copy automatically, then track streaks for each checklist line.')+'</p><button class="scancel" data-x>DONE</button>'}
  sheet('<div id="rpB">'+body()+'</div>',function(sh){sh.addEventListener('click',function(e){var b=e.target.closest('[data-d],[data-q]');if(!b)return;
   if(b.dataset.q){r=b.dataset.q==='all'?[0,1,2,3,4,5,6]:b.dataset.q==='wk'?[1,2,3,4,5]:[]}else{var d=+b.dataset.d,i=r.indexOf(d);if(i>-1)r.splice(i,1);else r.push(d)}
-  t.rep=r.slice();if(r.length&&!t.cat){t.cat=habitsCat()}if(S.tpls.indexOf(t)<0&&!t._new)S.tpls.unshift(t);save();if(!t._new)ensureDaily();if(cur===t){edMeta();habitMarks()}if(pgRedraw)pgRedraw();$('#rpB',sh).innerHTML=body()})})}
+  t.rep=r.slice();if(r.length&&!t.cat&&!t.dt){t.cat=habitsCat()}if(S.tpls.indexOf(t)<0&&!t._new)S.tpls.unshift(t);save();if(!t._new)ensureDaily();if(cur===t){edMeta();habitMarks()}if(pgRedraw)pgRedraw();$('#rpB',sh).innerHTML=body()})})}
 function habStats(t){var days=habDays(t.id),today=dk(),rep=repOf(t),keys=[],lb={};
  var d0=document.createElement('div');d0.innerHTML=t.html||'';$$('ul.chk>li',d0).forEach(function(li){var k=habKey(li);if(k&&!lb[k]){lb[k]=li.textContent.replace(/[\u200b\u2063]/g,'').trim();keys.push(k)}});
  var first=Object.keys(days).sort()[0]||today;
@@ -1595,11 +1600,12 @@ function statsPage(t){if(!t)return;var pg=document.createElement('div');pg.class
 function openTemplates(){var pg=document.createElement('div');pg.className='pg';pg.style.zIndex=topZ();document.body.appendChild(pg);
  function draw(){pg.innerHTML='<div class="in"><div class="edtop" style="padding-left:0"><button class="ic" data-x aria-label="Back">'+IC.back+'</button></div><h1>Templates & habits</h1><div class="glbl">Start notes from a template. Set one to repeat and Taskist adds a fresh copy each day, then records your streaks.</div>'+
   (S.tpls.length?'<div class="grp">'+S.tpls.map(function(t){var n=habMap(t).o.length,rp=(t.rep||[]).length;return '<div class="gi tpr" data-open="'+t.id+'" role="button" tabindex="0"><span class="tpn"><b>'+esc(tplName(t))+'</b><small>'+esc(repLabel(t.rep))+(n?' · '+n+(n===1?' item':' items'):'')+'</small></span><span class="tpbtn">'+(rp?'<button class="lnk" data-st="'+t.id+'">Stats</button>':'')+'<button class="lnk" data-use="'+t.id+'">Use</button></span></div>'}).join('')+'</div>':'')+
-  '<div class="grp"><button class="gi" data-newh style="color:var(--ac)"><span>New daily habits</span></button><button class="gi" data-new style="color:var(--ac)"><span>New template</span></button></div></div>'}
+  '<div class="grp"><button class="gi" data-newd style="color:var(--ac)"><span>New daily tasks note</span></button><button class="gi" data-newh style="color:var(--ac)"><span>New daily habits</span></button><button class="gi" data-new style="color:var(--ac)"><span>New template</span></button></div></div>'}
  draw();var done=false,old=pgRedraw;function rm(){if(done)return;done=true;pgRedraw=old;outRm(pg);render()}pushLayer(rm);pgRedraw=draw;
  pg.addEventListener('click',function(e){var b;if(e.target.closest('[data-x]')){closeTop();return}
   if((b=e.target.closest('[data-st]'))){statsPage(tplById(b.dataset.st));return}
   if((b=e.target.closest('[data-use]'))){var t=tplById(b.dataset.use);closeTop(function(){setTab('notes');newFromTpl(t)});return}
+  if(e.target.closest('[data-newd]')){newDailyTasks(true);return}
   if(e.target.closest('[data-newh]')){newTpl(true);return}
   if(e.target.closest('[data-new]')){newTpl(false);return}
   if((b=e.target.closest('[data-open]'))){openNote(tplById(b.dataset.open))}})}
@@ -1948,7 +1954,7 @@ function calItems(k){var t=dk(),o={wf:G().workouts.length?workoutFor(k):null,tod
  var d0=dkDate(k).getTime(),d1=d0+864e5;
  S.todos.forEach(function(x){if(x.del)return;if(x.due&&x.due>=d0&&x.due<d1)o.todos.push(x);else if(k===t&&x.due&&x.due<d0&&!x.done)o.od.push(x)});
  o.todos.sort(function(a,b){return a.due-b.due});
- o.hab=[];S.notes.forEach(function(n){if(n.del)return;if(n.tid&&n.day){if(n.day===k)o.hab.push(n);return}if((n.updated>=d0&&n.updated<d1)||(n.created>=d0&&n.created<d1))o.notes.push(n)});
+ o.hab=[];S.notes.forEach(function(n){if(n.del)return;if(n.tid&&n.day&&!plainDaily(n)){if(n.day===k)o.hab.push(n);return}if((n.updated>=d0&&n.updated<d1)||(n.created>=d0&&n.created<d1))o.notes.push(n)});
  return o}
 function calCount(o){return o.hab.length+(o.wf&&o.wf.w?1:0)+o.todos.length+o.notes.length+(o.food?1:0)}
 function calDots(k){var o=calItems(k),h='';if(o.hab.length){var hp=habProg(o.hab);h+='<i class="dh'+(hp.t&&hp.d===hp.t?' f':'')+'"></i>'}if(o.wf&&(o.wf.state==='done'||o.wf.state==='planned'||o.wf.state==='active'))h+='<i class="dg'+(o.wf.state==='done'?' f':'')+'"></i>';if(o.todos.length)h+='<i class="dt2'+(o.todos.every(function(x){return x.done})?' f':'')+'"></i>';if(o.notes.length||o.food)h+='<i class="dn2"></i>';return h}
@@ -2022,7 +2028,7 @@ setInterval(function(){if(S&&S.tpls)ensureDaily()},60000);
 window.addEventListener('focus',checkUpdate);
 setInterval(function(){if(!document.hidden)checkUpdate()},5*60*1000);
 /* ---------- boot ---------- */
-load().then(function(d){S=norm(d||fresh());if(!d)persist();applyTheme();purge();ensureDaily();render();checkDue();checkUpdate();TKSYNC.start()});
+load().then(function(d){S=norm(d||fresh());if(!d)persist();applyTheme();purge();if(!S.set.dailyTasks1){S.set.dailyTasks1=1;if(!S.tpls.some(function(t){return t.dt}))newDailyTasks(false);save()}ensureDaily();render();checkDue();checkUpdate();TKSYNC.start()});
 if('serviceWorker' in navigator&&location.protocol.indexOf('http')===0){try{navigator.serviceWorker.register('sw.js').catch(function(){})}catch(e){}}
 })();
 </script>
