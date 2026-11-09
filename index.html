@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="build" content="20261109-191857">
+<meta name="build" content="20261109-193343">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Taskist</title>
 <meta name="theme-color" content="#000000" id="mtc">
@@ -787,7 +787,7 @@ function notesList(){
  var l=S.notes.filter(function(n){return matchF(n,filt)});
  if(q){var qq=q.toLowerCase();l=l.filter(function(n){return (n.title+' '+(n.lock?'':noteText(n))).toLowerCase().indexOf(qq)>-1})}
  var so=S.set.sort;l.sort(function(a,b){if(S.set.prifirst&&filt!=='trash'&&so!=='custom'){var d=priRank(a.pri)-priRank(b.pri);if(d)return d}if(so==='custom'){var oa=a.ord==null?-1e15+(-a.updated):a.ord,ob=b.ord==null?-1e15+(-b.updated):b.ord;return oa-ob}if(so==='title')return noteInfo(a).title.localeCompare(noteInfo(b).title);if(so==='created')return b.created-a.created;return b.updated-a.updated});
- if(filt!=='trash'&&!q){var tk=dk();l=l.filter(function(n){return n.tid&&n.day===tk}).concat(l.filter(function(n){return !(n.tid&&n.day===tk)}))}
+ if(filt!=='trash'&&!q&&so!=='custom'){var tk=dk();l=l.filter(function(n){return n.tid&&n.day===tk}).concat(l.filter(function(n){return !(n.tid&&n.day===tk)}))}
  if(filt!=='trash'){l=l.filter(function(n){return n.pin}).sort(function(a,b){return b.pin-a.pin}).concat(l.filter(function(n){return !n.pin}))}
  return l;
 }
@@ -1122,7 +1122,7 @@ document.addEventListener('click',function(e){
  if((a==='open'||a==='topen')&&lpFired){lpFired=false;return}
  switch(a){
   case 'tab':setTab(el.dataset.t);break;
-  case 'fab':if(tab==='notes'){if(S.tpls.length)fabChooser();else openNote(null)}else if(tab==='todos')quickAdd();else if(tab==='cal'){var dd=dkDate(calSel);dd.setHours(9,0,0,0);quickAdd(calSel===dk()?0:dd.getTime())}else if(tab==='food')foodSheet(null,null);break;
+  case 'fab':if(tab==='notes'){if(S.tpls.some(function(t){return !(t.rep||[]).length}))fabChooser();else openNote(null)}else if(tab==='todos')quickAdd();else if(tab==='cal'){var dd=dkDate(calSel);dd.setHours(9,0,0,0);quickAdd(calSel===dk()?0:dd.getTime())}else if(tab==='food')foodSheet(null,null);break;
   case 'gmenu':gymMenu(el);break;case 'fmenu':foodMenu(el);break;case 'cmenu':calMenu(el);break;
   case 'gstart':gStart(false);break;case 'gtrain':gStart(true);break;
   case 'gresume':var al=gLog(dk());if(al)openSession(al);break;
@@ -1441,6 +1441,9 @@ var TKSYNC=window.TKSYNC=(function(){
    var o={},bb=(b&&typeof b==='object')?b:{};Object.keys(l).concat(Object.keys(r)).forEach(function(k){if(k in o)return;var lk=k in l,rk=k in r;
     if(lk&&rk)o[k]=m3(bb[k],l[k],r[k]);else if(lk){if(k in bb&&J(l[k])===J(bb[k]))return;o[k]=l[k]}else{if(k in bb&&J(r[k])===J(bb[k]))return;o[k]=r[k]}});return o}
   return l}
+ function dedupeDaily(m){var ts=(m.tpls||[]).filter(function(t){return t.dt});if(ts.length>1){ts.sort(function(a,b){return a.created-b.created});var keep=ts[0],drop={};ts.slice(1).forEach(function(t){drop[t.id]=1});m.tpls=m.tpls.filter(function(t){return !drop[t.id]});(m.notes||[]).forEach(function(n){if(drop[n.tid])n.tid=keep.id})}
+  var seen={};(m.notes||[]).slice().sort(function(a,b){var pa=a.updated===a.created&&!/data-done/.test(a.html||''),pb=b.updated===b.created&&!/data-done/.test(b.html||'');return (pa-pb)||(b.updated-a.updated)}).forEach(function(n){if(!n.tid||!n.day||n.del)return;var k=n.tid+'|'+n.day;if(!seen[k]){seen[k]=n;return}if(n.updated===n.created&&!/data-done/.test(n.html||''))n._x=1});
+  m.notes=(m.notes||[]).filter(function(n){return !n._x});return m}
  function ready(){return !!(c.refresh&&c.uid)}
  function savePush(sub){return token().then(function(t){return fetch(URL0+'/rest/v1/push_subs?on_conflict=endpoint',{method:'POST',headers:Object.assign(hdr(t),{Prefer:'resolution=merge-duplicates,return=minimal'}),body:JSON.stringify({endpoint:sub.endpoint,user_id:c.uid,sub:sub})}).then(jt)})}
  function delPush(ep){return token().then(function(t){return fetch(URL0+'/rest/v1/push_subs?endpoint=eq.'+encodeURIComponent(ep),{method:'DELETE',headers:hdr(t)})}).catch(function(){})}
@@ -1454,6 +1457,7 @@ var TKSYNC=window.TKSYNC=(function(){
    if(!remObj){merged=local}
    else if(base&&base.rev===rem.rev){merged=local}
    else merged=m3(base?base.data:undefined,local,remObj);
+   merged=dedupeDaily(merged);
    var p=Promise.resolve(),mj=J(merged);
    // daily cloud backup of whatever was there before we overwrite
    var td=dk();if(rem&&c.bak!==td){p=p.then(function(){return put(DOC+'_bak',rem.json,Date.now())}).then(function(){c.bak=td;st()},function(){})}
