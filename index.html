@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="build" content="20261109-074358">
+<meta name="build" content="20261109-074624">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Taskist</title>
 <meta name="theme-color" content="#000000" id="mtc">
@@ -440,9 +440,15 @@ input:focus-visible,textarea:focus-visible,.edb:focus-visible,.edt:focus-visible
 .cday.on span{color:#fff}
 .cday.tdy:not(.on) b{color:var(--ac)}
 .cnav{padding:0 4px;background:none;color:var(--mu);height:62px}
-.chips.cweek{overflow:hidden;flex-wrap:nowrap;margin:0 0 12px;padding:0;gap:3px}
-.cweek .cday{flex:1 1 0;min-width:0;padding:0}
-.cweek .cnav{flex:none;width:24px;min-width:0;padding:0;justify-content:center}
+.chips.cweek{overflow:hidden;flex-wrap:nowrap;margin:2px 0 14px;padding:0;gap:6px;touch-action:pan-y}
+.cweek .cday{flex:1 1 0;min-width:0;padding:0;height:58px;border-radius:18px;background:none;gap:2px}
+.cweek .cday span{font-size:12px}.cweek .cday b{font-size:18px}
+.cweek .cday.on{background:var(--ac)}
+.cweek .cday.tdy:not(.on){box-shadow:inset 0 0 0 1.5px var(--ac)}
+.cnt:has(.cwn){display:flex;align-items:center;white-space:nowrap}
+.cweek.swl{animation:swl .22s ease-out}.cweek.swr{animation:swr .22s ease-out}@keyframes swl{from{transform:translateX(30px);opacity:.3}}@keyframes swr{from{transform:translateX(-30px);opacity:.3}}
+.cwn{margin-left:auto;display:flex;gap:2px;margin-right:-8px}
+.cwn .cnav{width:34px;height:30px;color:var(--mu);background:none}.cwn .cnav svg{width:18px;height:18px}
 html,body{overflow-x:clip}
 i.dg,i.dt2,i.dn2{width:5px;height:5px;border-radius:50%;display:inline-block;border:1px solid}
 i.dg{border-color:var(--p1)}i.dg.f{background:var(--p1)}
@@ -1121,6 +1127,8 @@ function toggleStyle(on){var p=$('#stp');if(on==null)on=p.hidden;if(on){var tt=$
 $('#ed').addEventListener('pointerdown',function(e){var b=e.target.closest('.edbar button,[data-a=undo],[data-a=redo]');if(b)e.preventDefault()});
 /* keep the keyboard open: on touch, tapping a toolbar button must not take focus away from the note */
 var keepSel='#edbar button,#stp button,[data-a=undo],[data-a=redo]',tBtn=null,tX=0,tY=0;
+(function(){var sx=0,sy=0,on=0;document.addEventListener('touchstart',function(e){on=!!e.target.closest('.cweek');if(on){sx=e.touches[0].clientX;sy=e.touches[0].clientY}},{passive:true});
+document.addEventListener('touchend',function(e){if(!on)return;on=0;var t=e.changedTouches[0],dx=t.clientX-sx,dy=t.clientY-sy;if(Math.abs(dx)>45&&Math.abs(dx)>Math.abs(dy)*1.5){calSel=addDk(calSel,dx<0?7:-7);render();var w=$('.cweek');if(w){w.classList.add(dx<0?'swl':'swr')}}},{passive:true})})();
 $('#ed').addEventListener('touchstart',function(e){var b=e.target.closest(keepSel);if(!b)return;var ae=document.activeElement;if(ae!==edB&&ae!==edT)return;e.preventDefault();tBtn=b;tX=e.touches[0].clientX;tY=e.touches[0].clientY;b.classList.add('tdown')},{passive:false});
 $('#ed').addEventListener('touchmove',function(e){if(tBtn&&(Math.abs(e.touches[0].clientX-tX)>10||Math.abs(e.touches[0].clientY-tY)>10)){tBtn.classList.remove('tdown');tBtn=null}},{passive:true});
 $('#ed').addEventListener('touchend',function(e){if(!tBtn)return;var b=tBtn;tBtn=null;b.classList.remove('tdown');e.preventDefault();b.click()},{passive:false});
@@ -1443,10 +1451,10 @@ function calCount(o){return (o.wf&&o.wf.w?1:0)+o.todos.length+o.notes.length+(o.
 function calDots(k){var o=calItems(k),h='';if(o.wf&&(o.wf.state==='done'||o.wf.state==='planned'||o.wf.state==='active'))h+='<i class="dg'+(o.wf.state==='done'?' f':'')+'"></i>';if(o.todos.length)h+='<i class="dt2'+(o.todos.every(function(x){return x.done})?' f':'')+'"></i>';if(o.notes.length||o.food)h+='<i class="dn2"></i>';return h}
 function renderCal(){
  var m=$('#main'),k=calSel,d=dkDate(k),o=calItems(k),n=calCount(o)+o.od.length;
- var mon=addDk(k,-((d.getDay()+6)%7)),chips='<div class="chips cweek"><button class="chip cnav" data-a="cweek" data-n="-7" aria-label="Previous week">'+TI.chevL+'</button>';
+ var mon=addDk(k,-((d.getDay()+6)%7)),chips='<div class="chips cweek">';
  for(var i=0;i<7;i++){var dd=addDk(mon,i),x=dkDate(dd);chips+='<button class="chip cday'+(dd===k?' on':'')+(dd===dk()?' tdy':'')+'" data-a="cday" data-d="'+dd+'"><span>'+WDS[x.getDay()].slice(0,2)+'</span><b>'+x.getDate()+'</b><em>'+calDots(dd)+'</em></button>'}
- chips+='<button class="chip cnav" data-a="cweek" data-n="7" aria-label="Next week">'+TI.chevR+'</button></div>';
- var h='<div class="top"><button class="ic" data-a="cmenu" aria-label="Menu">'+IC.dots+'</button></div><button class="ttl" data-a="cpanel">'+MON[d.getMonth()]+(d.getFullYear()!==new Date().getFullYear()?' '+d.getFullYear():'')+' <i></i></button><div class="cnt">'+esc(k===dk()?'Today':WDL[d.getDay()])+', '+d.getDate()+' '+MON[d.getMonth()]+' · '+(n?n+(n===1?' item':' items'):'nothing planned')+'</div>'+chips;
+ chips+='</div>';
+ var h='<div class="top"><button class="ic" data-a="cmenu" aria-label="Menu">'+IC.dots+'</button></div><button class="ttl" data-a="cpanel">'+MON[d.getMonth()]+(d.getFullYear()!==new Date().getFullYear()?' '+d.getFullYear():'')+' <i></i></button><div class="cnt">'+esc(k===dk()?'Today':WDL[d.getDay()].slice(0,3))+', '+d.getDate()+' '+MON[d.getMonth()]+' · '+(n?n+(n===1?' item':' items'):'nothing planned')+'<span class="cwn"><button class="ic cnav" data-a="cweek" data-n="-7" aria-label="Previous week">'+TI.chevL+'</button><button class="ic cnav" data-a="cweek" data-n="7" aria-label="Next week">'+TI.chevR+'</button></span></div>'+chips;
  if(o.wf&&o.wf.state!=='past'&&o.wf.state!=='none'){var wf=o.wf,st={done:'Done',planned:'Planned',active:'In progress',rest:'Rest day',skipped:'Skipped',partial:'Not finished'}[wf.state]||'';
   h+='<div class="tgh">WORKOUT</div><div class="card cwk'+(wf.state==='done'?' dn':'')+'" data-a="cgym" role="button" tabindex="0"><span class="gbig">'+(wf.w?esc(wLetter(wf.w)):'–')+'</span><div class="cb"><div class="ct"><span>'+(wf.w?esc(wf.w.name):esc(st))+'</span></div><div class="cm"><span class="tx">'+esc(st)+(wf.w&&wf.state==='planned'?' · '+wf.w.ex.length+' exercises · about '+estMin(wf.w)+' min':'')+(wf.log&&wf.log.fin?' · '+logVolume(wf.log).n+' sets':'')+'</span></div></div>'+(wf.state==='done'?'<span class="cdone" style="width:20px;height:20px">'+IC.tick+'</span>':'')+'</div>'}
  if(o.od.length)h+='<div class="tgh od">OVERDUE</div><div class="tlist">'+o.od.map(todoRow).join('')+'</div>';
