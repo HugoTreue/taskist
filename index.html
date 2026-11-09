@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="build" content="20261109-074911">
+<meta name="build" content="20261109-080521">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Taskist</title>
 <meta name="theme-color" content="#000000" id="mtc">
@@ -442,7 +442,7 @@ input:focus-visible,textarea:focus-visible,.edb:focus-visible,.edt:focus-visible
 .cnav{padding:0 4px;background:none;color:var(--mu);height:62px}
 .chips.cweek{overflow:hidden;flex-wrap:nowrap;margin:2px 0 14px;padding:0;gap:6px;touch-action:pan-y}
 .cweek .cday{flex:1 1 0;min-width:0;padding:0;height:58px;border-radius:18px;background:none;gap:2px}
-.cweek .cday span{font-size:12px}.cweek .cday b{font-size:18px}
+.cweek .cday span{font-size:12px;letter-spacing:.2px;white-space:nowrap}@media (max-width:340px){.cweek .cday span{font-size:11px;letter-spacing:0}.chips.cweek{gap:4px}}.cweek .cday b{font-size:18px}
 .cweek .cday.on{background:var(--ac)}
 .cweek .cday.tdy:not(.on){box-shadow:inset 0 0 0 1.5px var(--ac)}
 .cnt:has(.cwn){display:flex;align-items:center;white-space:nowrap}
@@ -1456,7 +1456,7 @@ function calDots(k){var o=calItems(k),h='';if(o.wf&&(o.wf.state==='done'||o.wf.s
 function renderCal(){
  var m=$('#main'),k=calSel,d=dkDate(k),o=calItems(k),n=calCount(o)+o.od.length;
  var mon=addDk(k,-((d.getDay()+6)%7)),chips='<div class="chips cweek">';
- for(var i=0;i<7;i++){var dd=addDk(mon,i),x=dkDate(dd);chips+='<button class="chip cday'+(dd===k?' on':'')+(dd===dk()?' tdy':'')+'" data-a="cday" data-d="'+dd+'"><span>'+WDS[x.getDay()].slice(0,2)+'</span><b>'+x.getDate()+'</b><em>'+calDots(dd)+'</em></button>'}
+ for(var i=0;i<7;i++){var dd=addDk(mon,i),x=dkDate(dd);chips+='<button class="chip cday'+(dd===k?' on':'')+(dd===dk()?' tdy':'')+'" data-a="cday" data-d="'+dd+'"><span>'+WDS[x.getDay()]+'</span><b>'+x.getDate()+'</b><em>'+calDots(dd)+'</em></button>'}
  chips+='</div>';
  var h='<div class="top"><button class="ic" data-a="cmenu" aria-label="Menu">'+IC.dots+'</button></div><button class="ttl" data-a="cpanel">'+MON[d.getMonth()]+(d.getFullYear()!==new Date().getFullYear()?' '+d.getFullYear():'')+' <i></i></button><div class="cnt">'+esc(k===dk()?'Today':WDL[d.getDay()].slice(0,3))+', '+d.getDate()+' '+MON[d.getMonth()]+' · '+(n?n+(n===1?' item':' items'):'nothing planned')+'<span class="cwn"><button class="ic cnav" data-a="cweek" data-n="-7" aria-label="Previous week">'+TI.chevL+'</button><button class="ic cnav" data-a="cweek" data-n="7" aria-label="Next week">'+TI.chevR+'</button></span></div>'+chips;
  if(o.wf&&o.wf.state!=='past'&&o.wf.state!=='none'){var wf=o.wf,st={done:'Done',planned:'Planned',active:'In progress',rest:'Rest day',skipped:'Skipped',partial:'Not finished'}[wf.state]||'';
