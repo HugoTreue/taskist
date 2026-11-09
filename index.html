@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="build" content="20261109-074624">
+<meta name="build" content="20261109-074911">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Taskist</title>
 <meta name="theme-color" content="#000000" id="mtc">
@@ -162,7 +162,7 @@ svg{display:block}
 .edb ol.al{list-style-type:lower-alpha}
 .edb ul.chk{list-style:none;padding-left:0}
 .edb ul.chk>li{position:relative;padding:2px 0 2px 36px;min-height:1.55em}
-.edb ul.chk>li:before{content:'';position:absolute;left:0;top:calc(2px + .775em - 11px);width:22px;height:22px;border:2px solid var(--mu);border-radius:50%;box-sizing:border-box}
+.edb ul.chk>li:before{content:'';position:absolute;left:0;top:calc(var(--cy,calc(2px + .775em)) - 11px);width:22px;height:22px;border:2px solid var(--mu);border-radius:50%;box-sizing:border-box}
 .edb ul.chk>li[data-done="1"]{color:var(--mu);text-decoration:line-through}
 .edb ul.chk>li[data-done="1"]:before{background:var(--ac) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 12.5l4 4 8-9'/%3E%3C/svg%3E") center/14px no-repeat;border-color:var(--ac)}
 .edb .im{margin:10px 0;line-height:0}
@@ -1021,7 +1021,7 @@ function edSave(){
  if(cur._new){delete cur._new;S.notes.unshift(cur)}
  save();edMeta();
 }
-function cleanHtml(){var h=edB.innerHTML.replace(/\u2063/g,'');if(/^(<div><br><\/div>|<br>)+$/.test(h))return '';return h}
+function cleanHtml(){var h=edB.innerHTML.replace(/\u2063/g,'').replace(/\s*--cy:\s*[^;"]*;?/g,'').replace(/ style="\s*"/g,'');if(/^(<div><br><\/div>|<br>)+$/.test(h))return '';return h}
 function edChanged(){edDirty=true;clearTimeout(edSaveT);edSaveT=setTimeout(edSave,500)}
 function closeNote(){
  edSave();
@@ -1031,6 +1031,10 @@ function closeNote(){
 edT.addEventListener('input',edChanged);
 edT.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();edB.focus();placeCaret(edB,true)}});
 edB.addEventListener('input',function(){fixFonts();edChanged()});
+function alignChk(){$$('ul.chk>li',edB).forEach(function(li){var r=document.createRange(),y=null,lt=li.getBoundingClientRect().top;r.selectNodeContents(li);var rs=r.getClientRects();for(var i=0;i<rs.length;i++){if(rs[i].height>0&&rs[i].width>=0){var top=rs[i].top,bot=rs[i].bottom;for(var j=i+1;j<rs.length;j++){if(rs[j].top>bot-2)break;if(rs[j].height>0){top=Math.min(top,rs[j].top);bot=Math.max(bot,rs[j].bottom)}}y=(top+bot)/2-lt;break}}
+ var v=y==null?'':Math.round(y)+'px';if(li.style.getPropertyValue('--cy')!==v){if(v)li.style.setProperty('--cy',v);else li.style.removeProperty('--cy');if(!li.getAttribute('style'))li.removeAttribute('style')}})}
+var chkRaf=0;new MutationObserver(function(){if(chkRaf)return;chkRaf=requestAnimationFrame(function(){chkRaf=0;alignChk()})}).observe(edB,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['style','class','data-done']});
+window.addEventListener('resize',function(){if(edB.offsetParent)alignChk()});
 edB.addEventListener('keydown',function(e){
  if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){var li=closestSel('li');if(li&&li.parentNode.classList.contains('chk')){e.preventDefault();chkEnter(li);edChanged();return}}
  if(e.key==='Backspace'){var li2=closestSel('li');if(li2&&li2.parentNode.classList.contains('chk')&&!li2.textContent&&li2.parentNode.children.length===1){e.preventDefault();document.execCommand('insertUnorderedList');edChanged()}}
