@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="build" content="20261109-125520">
+<meta name="build" content="20261109-134355">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Taskist</title>
 <meta name="theme-color" content="#000000" id="mtc">
@@ -13,8 +13,8 @@
 <link rel="icon" href="icon-192.png?v=5">
 <link rel="apple-touch-icon" href="icon-192.png?v=5">
 <style>
-:root{--bg:#000;--card:#232427;--card2:#2d2e32;--tx:#f2f2f3;--mu:#9a9ba1;--ln:rgba(255,255,255,.1);--ac:#2f7bf6;--acs:rgba(47,123,246,.18);--st:#2b2521;--pop:#25262a;--sh:0 12px 34px rgba(0,0,0,.6);--p1:#e6b450;--p1t:#1d1606;--p2:#c3c7cf;--p2t:#16181c;--red:#ff4d42;--scrim:rgba(0,0,0,.55);--ink:#fff;--kb:0px;--hb:#34c759;color-scheme:dark}
-:root[data-th=light]{--bg:#f1f3f5;--card:#fff;--card2:#eceef1;--tx:#17181b;--mu:#7c7e85;--ln:rgba(0,0,0,.09);--ac:#256fff;--acs:rgba(37,111,255,.12);--st:#fbf2e4;--pop:#fff;--sh:0 12px 34px rgba(0,0,0,.16);--p1:#c08a1c;--p2:#8b9099;--p1t:#fff;--p2t:#fff;--red:#e5372c;--scrim:rgba(0,0,0,.32);--ink:#111;--hb:#1fa64a;color-scheme:light}
+:root{--bg:#000;--card:#232427;--card2:#2d2e32;--tx:#f2f2f3;--mu:#9a9ba1;--ln:rgba(255,255,255,.1);--ac:#2f7bf6;--acs:rgba(47,123,246,.18);--st:#2b2521;--pop:#25262a;--sh:0 12px 34px rgba(0,0,0,.6);--p1:#e6b450;--p1t:#1d1606;--p2:#c3c7cf;--p2t:#16181c;--red:#ff4d42;--scrim:rgba(0,0,0,.55);--ink:#fff;--kb:0px;--hb:#34c759;--prs:rgba(255,255,255,.13);color-scheme:dark}
+:root[data-th=light]{--bg:#f1f3f5;--card:#fff;--card2:#eceef1;--tx:#17181b;--mu:#7c7e85;--ln:rgba(0,0,0,.09);--ac:#256fff;--acs:rgba(37,111,255,.12);--st:#fbf2e4;--pop:#fff;--sh:0 12px 34px rgba(0,0,0,.16);--p1:#c08a1c;--p2:#8b9099;--p1t:#fff;--p2t:#fff;--red:#e5372c;--scrim:rgba(0,0,0,.32);--ink:#111;--hb:#1fa64a;--prs:rgba(0,0,0,.07);color-scheme:light}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--tx);font-family:"HarmonyOS Sans","HONOR Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased}
 body{min-height:100vh;overscroll-behavior-y:none}
@@ -82,6 +82,18 @@ svg{display:block}
 .nav{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--bg);display:flex;justify-content:space-around;padding:6px 0 calc(6px + env(safe-area-inset-bottom))}
 .nav button{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:12.5px;color:var(--mu);width:50%}
 .nav button.on{color:var(--ac)}
+.nav button{transition:color .3s ease}
+.nav .ni{position:relative}.nav .ni>span{position:absolute;inset:0;display:grid;place-items:center}
+.nav .nin{clip-path:circle(0% at 18% 88%);transition:clip-path .34s cubic-bezier(.4,0,.2,1)}
+.nav button.on .nin{clip-path:circle(80% at 18% 88%)}
+.nav .nio{transition:opacity .12s .3s}.nav button.on .nio{opacity:0}
+.nav button:not(.on) .nio{transition-delay:0s}
+.nav.noan *,.nav.noan{transition:none!important}
+.nav button,.edbar button,.selbar button{position:relative}
+.nav button:before,.edbar button:before,.selbar button:before{content:'';position:absolute;top:-6px;bottom:-6px;left:6px;right:6px;border-radius:16px;background:var(--prs);opacity:0;transition:opacity .3s ease-out;pointer-events:none;z-index:-1}
+.edbar button:before,.selbar button:before{top:-5px;bottom:-5px;left:2px;right:2px;border-radius:14px}
+.nav button.pr:before,.edbar button.pr:before,.selbar button.pr:before{opacity:1;transition:opacity .05s}
+.nav,.edbar,.selbar{isolation:isolate}
 .nav .ni{width:28px;height:28px;display:grid;place-items:center}.nav .ni svg{width:22px;height:24px}#tbT .ni svg{width:24px;height:24px}
 .selbar{position:fixed;left:0;right:0;bottom:0;z-index:21;background:var(--bg);display:flex;justify-content:space-around;padding:10px 0 calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--ln)}
 .selbar button{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11.5px;min-width:60px}
@@ -727,7 +739,10 @@ function purge(){var lim=Date.now()-30*864e5,b=S.notes.length;S.notes=S.notes.fi
 /* ---------- app state ---------- */
 var tab='notes',filt='all',tfilt='all',q='',selMode=false,sel={},showDone=false,lpFired=false;
 try{tab=localStorage.getItem('taskist.tab')||'notes';filt=localStorage.getItem('taskist.f')||'all';tfilt=localStorage.getItem('taskist.tf')||'all'}catch(e){}
-function navOn(tab){var HT=S.set.hideTabs||{};[['notes','tbN',IC.noteOn,IC.noteOff],['todos','tbT',IC.todoOn,IC.todoOff],['cal','tbC',TI.calOn,TI.cal],['gym','tbG',TI.gymOn,TI.gym],['food','tbF',TI.foodOn,TI.food]].forEach(function(x){var b=document.getElementById(x[1]);b.classList.toggle('on',tab===x[0]);b.hidden=!!HT[x[0]];b.querySelector('.ni').innerHTML=tab===x[0]?x[2]:x[3]});}
+function navOn(tab){var HT=S.set.hideTabs||{},nv=$('#nav');if(!nv.dataset.b){nv.classList.add('noan');requestAnimationFrame(function(){requestAnimationFrame(function(){nv.classList.remove('noan')})})}[['notes','tbN',IC.noteOn,IC.noteOff],['todos','tbT',IC.todoOn,IC.todoOff],['cal','tbC',TI.calOn,TI.cal],['gym','tbG',TI.gymOn,TI.gym],['food','tbF',TI.foodOn,TI.food]].forEach(function(x){var b=document.getElementById(x[1]);b.classList.toggle('on',tab===x[0]);b.hidden=!!HT[x[0]];var ni=b.querySelector('.ni');if(!nv.dataset.b)ni.innerHTML='<span class="nio">'+x[3]+'</span><span class="nin">'+x[2]+'</span>'});nv.dataset.b=1;}
+document.addEventListener('pointerdown',function(e){var b=e.target.closest&&e.target.closest('.nav button,.edbar button,.selbar button');if(!b)return;b.classList.add('pr');var t0=Date.now();
+ function up(){document.removeEventListener('pointerup',up,true);document.removeEventListener('pointercancel',up,true);setTimeout(function(){b.classList.remove('pr')},Math.max(60,180-(Date.now()-t0)))}
+ document.addEventListener('pointerup',up,true);document.addEventListener('pointercancel',up,true)},true);
 var mfT=0,mfTok=0;
 function fadeIn(){var m=$('#main');if(!m)return;m.classList.remove('mfo','mfi');void m.offsetWidth;m.classList.add('mfi');clearTimeout(mfT);mfT=setTimeout(function(){m.classList.remove('mfi')},260)}
 function swapMain(fn){var m=$('#main'),tok=++mfTok;if(!m||matchMedia('(prefers-reduced-motion:reduce)').matches){fn();return}m.classList.remove('mfi');m.classList.add('mfo');setTimeout(function(){if(tok!==mfTok)return;fn();fadeIn()},90)}
