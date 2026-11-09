@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="build" content="20261109-091156">
+<meta name="build" content="20261109-125520">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Taskist</title>
 <meta name="theme-color" content="#000000" id="mtc">
@@ -141,8 +141,8 @@ svg{display:block}
 .dsec i{font-style:normal;transition:transform .2s;display:inline-block}
 .dsec.shut i{transform:rotate(-90deg)}
 /* editor */
-.ed{position:fixed;inset:0;z-index:30;background:var(--bg);display:flex;flex-direction:column;animation:ein .2s ease-out}
-@keyframes ein{from{transform:translateX(24px);opacity:0}}
+.ed{position:fixed;inset:0;z-index:30;background:var(--bg);display:flex;flex-direction:column;animation:ein .24s cubic-bezier(.2,.8,.3,1)}
+@keyframes ein{from{transform:translateY(10px) scale(.99);opacity:0}}
 .edtop{flex:none;display:flex;align-items:center;gap:4px;height:52px;padding:env(safe-area-inset-top) 8px 0;box-sizing:content-box;max-width:680px;width:100%;margin:0 auto}
 .edtop .sp{flex:1}
 .edtop .ic:disabled{opacity:.3}
@@ -208,7 +208,7 @@ svg{display:block}
 .dwpop .wd.on{outline:2px solid var(--ac)}
 .dwpop .wd i{display:block;border-radius:9px;background:var(--tx);width:22px}
 /* settings */
-.pg{position:fixed;inset:0;z-index:35;background:var(--bg);overflow-y:auto;animation:ein .2s}
+.pg{position:fixed;inset:0;z-index:35;background:var(--bg);overflow-y:auto;animation:ein .24s cubic-bezier(.2,.8,.3,1)}
 .pg .in{max-width:640px;margin:0 auto;padding:0 12px 40px}
 .pg h1{font-size:26px;font-weight:500;margin:8px 12px 18px}
 .grp{background:var(--card);border-radius:18px;margin-bottom:16px;overflow:hidden}
@@ -310,12 +310,17 @@ html{background:var(--bg)}
 .pop.out{animation:ppo .15s forwards}
 .sheet.out,.qa.out{animation:suo .17s forwards}
 .dlg.out{animation:dlo .15s forwards}
-.pg.out,.ed.eout{animation:eout .17s forwards}
+.pg.out,.ed.eout{animation:eout .18s ease-in forwards}
+#main.mfo{opacity:0;transition:opacity .09s ease-in}
+#main.mfi{animation:mfi .22s cubic-bezier(.2,.8,.3,1)}@keyframes mfi{from{opacity:0;transform:translateY(6px)}}
+.tgo{animation:tgo .24s ease-in forwards}@keyframes tgo{to{opacity:0;transform:translateX(14px)}}
+.tin{animation:tin .3s cubic-bezier(.2,.8,.3,1)}@keyframes tin{from{opacity:0;transform:translateY(-6px)}}
+@media (prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 @keyframes fdo{to{opacity:0}}
 @keyframes ppo{to{opacity:0;transform:scale(.94)}}
 @keyframes suo{to{opacity:0;transform:translateY(30px)}}
 @keyframes dlo{to{opacity:0;transform:translateY(-50%) scale(.95)}}
-@keyframes eout{to{opacity:0;transform:translateX(24px)}}
+@keyframes eout{to{opacity:0;transform:translateY(10px) scale(.99)}}
 .dlg{animation:dli .16s}
 @keyframes dli{from{opacity:0;transform:translateY(-50%) scale(.95)}}
 .nav,.selbar{max-width:680px;margin:0 auto}
@@ -722,7 +727,12 @@ function purge(){var lim=Date.now()-30*864e5,b=S.notes.length;S.notes=S.notes.fi
 /* ---------- app state ---------- */
 var tab='notes',filt='all',tfilt='all',q='',selMode=false,sel={},showDone=false,lpFired=false;
 try{tab=localStorage.getItem('taskist.tab')||'notes';filt=localStorage.getItem('taskist.f')||'all';tfilt=localStorage.getItem('taskist.tf')||'all'}catch(e){}
-function setTab(t){if(t!==tab){gymSel=null;if(t==="cal")calSel=dk()}if(t==='food'&&tab!=='food')foodDay=dk();tab=t;try{localStorage.setItem('taskist.tab',t)}catch(e){}selMode=false;sel={};render();window.scrollTo(0,0)}
+function navOn(tab){var HT=S.set.hideTabs||{};[['notes','tbN',IC.noteOn,IC.noteOff],['todos','tbT',IC.todoOn,IC.todoOff],['cal','tbC',TI.calOn,TI.cal],['gym','tbG',TI.gymOn,TI.gym],['food','tbF',TI.foodOn,TI.food]].forEach(function(x){var b=document.getElementById(x[1]);b.classList.toggle('on',tab===x[0]);b.hidden=!!HT[x[0]];b.querySelector('.ni').innerHTML=tab===x[0]?x[2]:x[3]});}
+var mfT=0,mfTok=0;
+function fadeIn(){var m=$('#main');if(!m)return;m.classList.remove('mfo','mfi');void m.offsetWidth;m.classList.add('mfi');clearTimeout(mfT);mfT=setTimeout(function(){m.classList.remove('mfi')},260)}
+function swapMain(fn){var m=$('#main'),tok=++mfTok;if(!m||matchMedia('(prefers-reduced-motion:reduce)').matches){fn();return}m.classList.remove('mfi');m.classList.add('mfo');setTimeout(function(){if(tok!==mfTok)return;fn();fadeIn()},90)}
+function setTab(t){if(t!==tab){var t0=t;navOn(t);swapMain(function(){setTab0(t0)});return}setTab0(t)}
+function setTab0(t){if(t!==tab){gymSel=null;if(t==="cal")calSel=dk()}if(t==='food'&&tab!=='food')foodDay=dk();tab=t;try{localStorage.setItem('taskist.tab',t)}catch(e){}selMode=false;sel={};render();window.scrollTo(0,0)}
 function fLabel(f,isT){if(f==='all')return isT?'To-dos':'All notes';if(f==='p1')return 'Primary';if(f==='p2')return 'Secondary';if(f==='star')return 'Starred';if(f==='none')return 'Uncategorised';if(f==='trash')return 'Recently deleted';if(f.indexOf('c:')===0)return catName(f.slice(2))||(isT?'To-dos':'All notes');return isT?'To-dos':'All notes'}
 function matchF(x,f){if(f==='trash')return !!x.del;if(x.del)return false;if(f==='all')return true;if(f==='p1')return x.pri===1;if(f==='p2')return x.pri===2;if(f==='star')return !!x.star;if(f==='none')return !x.cat||!catName(x.cat);if(f.indexOf('c:')===0)return x.cat===f.slice(2);return true}
 function notesList(){
@@ -736,7 +746,7 @@ function notesList(){
 function render(){
  document.body.classList.toggle('selmode',selMode);
  var HT=S.set.hideTabs||{};if(HT[tab]){tab='notes'}
- [['notes','tbN',IC.noteOn,IC.noteOff],['todos','tbT',IC.todoOn,IC.todoOff],['cal','tbC',TI.calOn,TI.cal],['gym','tbG',TI.gymOn,TI.gym],['food','tbF',TI.foodOn,TI.food]].forEach(function(x){var b=document.getElementById(x[1]);b.classList.toggle('on',tab===x[0]);b.hidden=!!HT[x[0]];b.querySelector('.ni').innerHTML=tab===x[0]?x[2]:x[3]});
+ navOn(tab);
  document.body.dataset.view=tab;
  $('#fab').innerHTML=IC.plus;$('#fab').hidden=selMode||(tab==='notes'&&filt==='trash')||tab==='gym';
  $('#nav').hidden=selMode;$('#selbar').hidden=!selMode;
@@ -847,7 +857,9 @@ function quickAdd(due0){
  });
 }
 function delTodos(ids){var snap=JSON.stringify(S.todos),n=Date.now();S.todos.forEach(function(t){if(ids.indexOf(t.id)>-1)t.del=n});save();selMode=false;sel={};render();toast(ids.length===1?'To-do deleted':ids.length+' to-dos deleted',function(){S.todos=JSON.parse(snap);save();render()})}
-function toggleTodo(id){var t=S.todos.filter(function(x){return x.id===id})[0];if(!t)return;t.done=!t.done;t.doneAt=t.done?Date.now():0;t.ts=Date.now();save();render();if(t.done)toast('Done',function(){t.done=false;t.doneAt=0;save();render()})}
+function toggleTodo(id){var t=S.todos.filter(function(x){return x.id===id})[0];if(!t)return;t.done=!t.done;t.doneAt=t.done?Date.now():0;t.ts=Date.now();save();
+ var row=document.querySelector('#main [data-id="'+id+'"]');function fin(){render();var nr=document.querySelector('#main [data-id="'+id+'"]');if(nr)nr.classList.add('tin')}
+ if(row&&tab==='todos'){row.classList.add('tgo');setTimeout(fin,230)}else fin();if(t.done)toast('Done',function(){t.done=false;t.doneAt=0;save();render()})}
 /* reminders */
 function askNotify(){try{if(window.Notification&&Notification.permission==='default')Notification.requestPermission()}catch(e){}}
 function checkDue(){if(!S)return;var n=Date.now(),ch=false;S.todos.forEach(function(t){if(t.due&&!t.done&&!t.del&&!t.nt&&t.due<=n&&n-t.due<864e5){t.nt=1;ch=true;var shown=false;try{if(window.Notification&&Notification.permission==='granted'){new Notification('Taskist',{body:t.t,icon:'icon-192.png'});shown=true}}catch(e){}if(!shown||!document.hidden)toast('Reminder: '+t.t)}});if(ch){save();if(tab==='todos'&&$('#ed').hidden)render()}}
@@ -902,7 +914,7 @@ function othersMenu(a,isT){
  items.push({t:'Manage sections',f:openCats});
  popMenu(a,items,{arrow:a});
 }
-function setFilter(f,isT){if(isT){tfilt=f;try{localStorage.setItem('taskist.tf',f)}catch(e){}}else{filt=f;try{localStorage.setItem('taskist.f',f)}catch(e){}}selMode=false;sel={};render()}
+function setFilter(f,isT){if(isT){tfilt=f;try{localStorage.setItem('taskist.tf',f)}catch(e){}}else{filt=f;try{localStorage.setItem('taskist.f',f)}catch(e){}}selMode=false;sel={};render();fadeIn()}
 /* ---------- categories ---------- */
 function addCat(cb){promptDlg('New section','','e.g. Gym, Shopping, Ideas',function(v){var c={id:'c_'+uid(),name:v,col:CPAL[S.cats.length%CPAL.length]};S.cats.push(c);save();render();if(cb)cb(c)})}
 function openCats(){
@@ -997,8 +1009,8 @@ document.addEventListener('click',function(e){
   case 'gwed':var we=wById(el.dataset.id);if(we)workoutEditor(we);break;
   case 'gwnew':var L='ABCDEFGHIJ'.charAt(G().workouts.length)||'N';var nw={id:'w_'+uid(),name:L+': New workout',ex:[]};G().workouts.push(nw);save();render();workoutEditor(nw);break;
   case 'grest':restSheet();break;
-  case 'fprev':foodDay=addDk(foodDay,-1);render();break;
-  case 'fnext':if(foodDay<dk()){foodDay=addDk(foodDay,1);render()}break;
+  case 'fprev':foodDay=addDk(foodDay,-1);render();fadeIn();break;
+  case 'fnext':if(foodDay<dk()){foodDay=addDk(foodDay,1);render();fadeIn()}break;
   case 'fwater':var fd=fDay(foodDay,true),wn=+el.dataset.n;fd.water=fd.water===wn?wn-1:wn;save();render();break;
   case 'fadd':foodSheet(null,el.dataset.m);break;
   case 'fedit':var fi=fDay(foodDay).items.filter(function(x){return x.id===el.dataset.id})[0];if(fi)foodSheet(fi);break;
@@ -1008,7 +1020,7 @@ document.addEventListener('click',function(e){
   case 'cweek':calAnim={week:+el.dataset.n>0?1:-1};calSel=addDk(calSel,+el.dataset.n);render();break;
   case 'otpl':var tq=tplById(el.dataset.id);if(tq)openNote(tq);break;
   case 'cgym':var cs0=calSel;setTab('gym');gymSel=cs0;render();break;
-  case 'cfood':foodDay=calSel;tab='food';try{localStorage.setItem('taskist.tab','food')}catch(x){}render();window.scrollTo(0,0);break;
+  case 'cfood':var cfd=calSel;swapMain(function(){foodDay=cfd;tab='food';try{localStorage.setItem('taskist.tab','food')}catch(x){}render();window.scrollTo(0,0)});break;
   case 'nmenu':notesMenu(el);break;
   case 'tmenu':todosMenu(el);break;
   case 'ctttl':if(tab==='notes')filterSheet(false);else if(tab==='todos')filterSheet(true);else if(tab==='cal')calPanel();else window.scrollTo({top:0,behavior:'smooth'});break;
