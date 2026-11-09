@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="build" content="20261109-080521">
+<meta name="build" content="20261109-083147">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Taskist</title>
 <meta name="theme-color" content="#000000" id="mtc">
@@ -441,8 +441,9 @@ input:focus-visible,textarea:focus-visible,.edb:focus-visible,.edt:focus-visible
 .cday.tdy:not(.on) b{color:var(--ac)}
 .cnav{padding:0 4px;background:none;color:var(--mu);height:62px}
 .chips.cweek{overflow:hidden;flex-wrap:nowrap;margin:2px 0 14px;padding:0;gap:6px;touch-action:pan-y}
-.cweek .cday{flex:1 1 0;min-width:0;padding:0;height:58px;border-radius:18px;background:none;gap:2px}
-.cweek .cday span{font-size:12px;letter-spacing:.2px;white-space:nowrap}@media (max-width:340px){.cweek .cday span{font-size:11px;letter-spacing:0}.chips.cweek{gap:4px}}.cweek .cday b{font-size:18px}
+.cweek .cday{flex:1 1 0;min-width:0;padding:10px 0 9px;height:auto;min-height:76px;border-radius:20px;background:none;gap:5px;justify-content:center;line-height:1}
+.cweek .cday em{margin-top:1px}
+.cweek .cday span{font-size:12.5px;letter-spacing:.3px;white-space:nowrap;line-height:1.1}@media (max-width:340px){.cweek .cday span{font-size:11px;letter-spacing:0}.chips.cweek{gap:4px}}.cweek .cday b{font-size:19px;line-height:1.1}
 .cweek .cday.on{background:var(--ac)}
 .cweek .cday.tdy:not(.on){box-shadow:inset 0 0 0 1.5px var(--ac)}
 .cnt:has(.cwn){display:flex;align-items:center;white-space:nowrap}
