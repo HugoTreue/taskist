@@ -136,10 +136,11 @@
    parts.forEach(p=>{if(p&&!/^[\s,.;:!?()"“”‘’…–—=\/]+$/.test(p)&&look(p)){const s=document.createElement('span');s.className='gw';s.textContent=p;fr.appendChild(s);any=true}else fr.appendChild(document.createTextNode(p))});
    if(any)t.parentNode.replaceChild(fr,t)})})}
  function wrapTerms(root){const scope=root.querySelectorAll('.lesson p,.lesson li,.lesson h4,.lesson td,.ask,.sub,.note,.card p,.q,table.t:not(.forms) td,.ex .en,#fb p,#dfb p');
-  scope.forEach(el=>{if(el.dataset.gt||el.closest(SKIP))return;el.dataset.gt=1;const tw=document.createTreeWalker(el,NodeFilter.SHOW_TEXT,{acceptNode:x=>x.parentNode.closest('.la,.gw,.gt,table.forms,'+SKIP)?NodeFilter.FILTER_REJECT:NodeFilter.FILTER_ACCEPT});
+  const seen=new Set();root.querySelectorAll('.story .gt').forEach(x=>seen.add(x.dataset.k));
+  scope.forEach(el=>{if(el.dataset.gt||el.closest(SKIP)||(el.tagName==='H4'&&el.closest('.story')))return;el.dataset.gt=1;const inStory=!!el.closest('.story');const tw=document.createTreeWalker(el,NodeFilter.SHOW_TEXT,{acceptNode:x=>x.parentNode.closest('.la,.gw,.gt,table.forms,'+SKIP)?NodeFilter.FILTER_REJECT:NodeFilter.FILTER_ACCEPT});
    const nodes=[];let n;while((n=tw.nextNode()))nodes.push(n);
    nodes.forEach(t=>{const s=t.textContent;GRX.lastIndex=0;if(!GRX.test(s))return;GRX.lastIndex=0;const fr=document.createDocumentFragment();let last=0,m;
-    while((m=GRX.exec(s))){fr.appendChild(document.createTextNode(s.slice(last,m.index)));const sp=document.createElement('span');sp.className='gt';sp.dataset.k=m[1].toLowerCase().replace(/\s+/g,' ');sp.textContent=m[1];fr.appendChild(sp);last=m.index+m[1].length}
+    while((m=GRX.exec(s))){const kk=m[1].toLowerCase().replace(/\s+/g,' ');if(inStory&&seen.has(kk))continue;if(inStory)seen.add(kk);fr.appendChild(document.createTextNode(s.slice(last,m.index)));const sp=document.createElement('span');sp.className='gt';sp.dataset.k=m[1].toLowerCase().replace(/\s+/g,' ');sp.textContent=m[1];fr.appendChild(sp);last=m.index+m[1].length}
     fr.appendChild(document.createTextNode(s.slice(last)));t.parentNode.replaceChild(fr,t)})})}
  const main=document.getElementById('main');let pend=0;
  function scan(){pend=0;try{wrapLatin(main);wrapTerms(main)}catch(e){}}

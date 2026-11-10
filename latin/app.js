@@ -84,10 +84,15 @@ function lesson(n){
   const X=(window.EXPL||{})[n];
   const xTop=X&&X.p?`<div class="card xp"><div class=xk>In plain English</div><p>${X.p}</p></div>`:'';
   const xEnd=X?`<div class="card xs"><h3>Make it stick</h3>${X.s?`<div class=xk>Step by step</div><ol class=xol>${X.s.map(x=>`<li>${x}</li>`).join('')}</ol>`:''}${X.e&&X.e.length?`<div class=xk>Worked example${X.e.length>1?'s':''}</div>${X.e.map(e=>`<div class=ex><span class=la>${e[0]}</span><span class=en>${e[1]}</span>${e[2]?`<span class=why>Why: ${e[2]}</span>`:''}</div>`).join('')}`:''}${X.m?`<div class=xk>Watch out for</div><ul class=xul>${X.m.map(x=>`<li>${x}</li>`).join('')}</ul>`:''}${X.h?`<div class=xk>Remember it</div><p class=xh>${X.h}</p>`:''}</div>`:'';
-  setMain(`<div class=crumb><a href="#learn">Course</a> · Unit ${L.u+1}</div><h2>${n}. ${esc(L.t)}</h2>${xTop}<article class=lesson>${renderBody(L.b)}</article>${xEnd}
+  const NR=(window.NARR||{})[n],nx=LESSONS[n];
+  const story=NR?`<article class="lesson story">${renderBody(NR)}</article>`:`${xTop}<article class=lesson>${renderBody(L.b)}</article>${xEnd}`;
+  const details=NR?`<details class="card dtl"><summary><h3>Tables & details</h3></summary><p class=note>Everything from this lesson in compact form, for looking things up later.</p><article class=lesson>${renderBody(L.b)}</article>${xEnd.replace('<div class="card xs">','<div class="xs">')}</details>`:'';
+  setMain(`<div class=crumb><a href="#learn">Course</a> · Lesson ${n} of ${LESSONS.length}</div><h2>${esc(L.t)}</h2>${story}
   ${L.dr?`<button class="btn" id=prac>Practise these forms →</button>`:''}
   <div class=card><h3>Check yourself</h3><div id=quiz></div></div>
-  <div class=pn>${n>1?`<a class="btn ghost" href="#lesson-${n-1}">← ${n-1}</a>`:'<span></span>'}<button class="btn ${S.done[n]?'ghost':''}" id=mark>${S.done[n]?'Completed ✓':'Mark complete'}</button>${n<50?`<a class="btn ghost" href="#lesson-${n+1}">${n+1} →</a>`:'<span></span>'}</div>`);
+  ${details}
+  <div class=pn>${n>1?`<a class="btn ghost" href="#lesson-${n-1}">← Back</a>`:'<span></span>'}<button class="btn ${S.done[n]?'ghost':''}" id=mark>${S.done[n]?'Completed ✓':'Mark complete'}</button></div>
+  ${nx?`<a class="card nxt" href="#lesson-${n+1}"><span class=xk>Next lesson</span><b>${n+1}. ${esc(nx.t)}</b><span class=nar>→</span></a>`:''}`);
   if(L.dr)$('#prac').onclick=()=>{DR.preset=L.dr;go('drill');};
   $('#mark').onclick=()=>{S.done[n]=S.done[n]?0:1;if(!S.done[n])delete S.done[n];save();bump();lesson(n);};
   let qi=0,score=0;const qs=L.q;
