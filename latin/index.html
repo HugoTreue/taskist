@@ -153,6 +153,21 @@ nav a.on .nin{clip-path:circle(44px at 18% 88%)}
 nav .nio{transition:opacity .12s .3s}nav a.on .nio{opacity:0}nav a:not(.on) .nio{transition-delay:0s}
 nav.noan *,nav.noan{transition:none!important}
 @media (min-width:760px){nav{max-width:720px;margin:0 auto;border-radius:24px 24px 0 0}}
+/* tap-to-explain words */
+.gw{cursor:pointer;border-radius:5px;transition:background .2s,color .2s;-webkit-user-select:none;user-select:none}
+.lesson .la .gw,.ex .gw,.prompt .gw,.front .gw,.answer .gw{text-decoration:underline dotted color-mix(in srgb,var(--acc) 55%,transparent);text-underline-offset:4px;text-decoration-thickness:1.5px}
+.gt{cursor:pointer;text-decoration:underline dotted color-mix(in srgb,var(--mute) 70%,transparent);text-underline-offset:3px;text-decoration-thickness:1.5px;border-radius:4px;transition:background .2s,color .2s}
+.gw.gon,.gt.gon{background:color-mix(in srgb,var(--acc) 18%,transparent);color:var(--acc)}
+#gb{position:fixed;z-index:40;background:var(--card);color:var(--ink);border-radius:18px;padding:14px 16px 13px;box-shadow:0 12px 40px rgba(0,0,0,.22),0 0 0 1px var(--line);font-size:14.5px;line-height:1.45;opacity:0;transform:translateY(6px) scale(.97);transform-origin:var(--ax) 0;pointer-events:auto}
+#gb.up{transform-origin:var(--ax) 100%}
+#gb.in{opacity:1;transform:none;transition:opacity .2s ease-out,transform .24s cubic-bezier(.2,.8,.3,1.1)}
+#gb.out{opacity:0;transform:translateY(4px) scale(.98);transition:opacity .17s ease-in,transform .17s ease-in}
+#gb .gbk{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--acc);margin-bottom:2px}
+#gb .gbh{font-size:19px;font-weight:600;line-height:1.2}#gb .gbh.la{font-size:22px}
+#gb .gbm{font-size:15.5px;margin-top:2px}
+#gb .gbx{color:var(--mute);font-size:13.5px;margin-top:6px}
+#gb .gbl{color:var(--mute);font-size:13px;margin-top:4px}
+#gb .gbi+.gbi{margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
 @media (prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 </style>
 </head>
@@ -179,5 +194,6 @@ nav.noan *,nav.noan{transition:none!important}
 <script src="content.js"></script>
 <script src="app.js"></script>
 <script src="motion.js"></script>
+<script src="gloss.js"></script>
 </body>
 </html>
