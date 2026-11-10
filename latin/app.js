@@ -81,7 +81,10 @@ function learn(){
 }
 function lesson(n){
   const L=LESSONS[n-1];if(!L)return learn();
-  setMain(`<div class=crumb><a href="#learn">Course</a> · Unit ${L.u+1}</div><h2>${n}. ${esc(L.t)}</h2><article class=lesson>${renderBody(L.b)}</article>
+  const X=(window.EXPL||{})[n];
+  const xTop=X&&X.p?`<div class="card xp"><div class=xk>In plain English</div><p>${X.p}</p></div>`:'';
+  const xEnd=X?`<div class="card xs"><h3>Make it stick</h3>${X.s?`<div class=xk>Step by step</div><ol class=xol>${X.s.map(x=>`<li>${x}</li>`).join('')}</ol>`:''}${X.e&&X.e.length?`<div class=xk>Worked example${X.e.length>1?'s':''}</div>${X.e.map(e=>`<div class=ex><span class=la>${e[0]}</span><span class=en>${e[1]}</span>${e[2]?`<span class=why>Why: ${e[2]}</span>`:''}</div>`).join('')}`:''}${X.m?`<div class=xk>Watch out for</div><ul class=xul>${X.m.map(x=>`<li>${x}</li>`).join('')}</ul>`:''}${X.h?`<div class=xk>Remember it</div><p class=xh>${X.h}</p>`:''}</div>`:'';
+  setMain(`<div class=crumb><a href="#learn">Course</a> · Unit ${L.u+1}</div><h2>${n}. ${esc(L.t)}</h2>${xTop}<article class=lesson>${renderBody(L.b)}</article>${xEnd}
   ${L.dr?`<button class="btn" id=prac>Practise these forms →</button>`:''}
   <div class=card><h3>Check yourself</h3><div id=quiz></div></div>
   <div class=pn>${n>1?`<a class="btn ghost" href="#lesson-${n-1}">← ${n-1}</a>`:'<span></span>'}<button class="btn ${S.done[n]?'ghost':''}" id=mark>${S.done[n]?'Completed ✓':'Mark complete'}</button>${n<50?`<a class="btn ghost" href="#lesson-${n+1}">${n+1} →</a>`:'<span></span>'}</div>`);
