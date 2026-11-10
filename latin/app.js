@@ -56,7 +56,7 @@ function dueCount(){const t=today();return Object.values(S.srs).filter(c=>c.due<
 function home(){
   const cl=curLesson(),done=Object.keys(S.done).length,phase=PLAN.findIndex(p=>cl>=p.l[0]&&cl<=p.l[1]);
   const acc=S.stats.t?Math.round(100*S.stats.r/S.stats.t):0;
-  setMain(`<section class=hero><h1>Latin in two years</h1><p>Read and write Classical Latin, one step a day.</p></section>
+  setMain(`<section class=hero><h1>Lingua Latina</h1><p>Read and write Classical Latin in two years, one step a day.</p></section>
   <div class=card><h3>Today</h3>
    <a class=todo href="#words"><b>Words</b><span>${dueCount()} due · ${Math.max(0,10-(S.newDay.d==today()?S.newDay.n:0))} new available</span></a>
    <a class=todo href="#lesson-${cl}"><b>Lesson ${cl}</b><span>${esc(LESSONS[cl-1].t)}</span></a>

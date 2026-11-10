@@ -13,7 +13,7 @@
  let titleEl=null;
  function onScroll(){const lim=titleEl?titleEl.getBoundingClientRect().bottom<56:window.scrollY>40;bar.classList.toggle('sc',window.scrollY>4&&lim||window.scrollY>140);}
  window.addEventListener('scroll',onScroll,{passive:true});
- window.afterRender=function(){titleEl=document.querySelector('#main h1,#main h2');tt.textContent=titleEl?titleEl.textContent.trim():'Latin';onScroll();};
+ window.afterRender=function(){titleEl=document.querySelector('#main h1,#main h2');tt.textContent=titleEl?titleEl.textContent.trim():'Lingua Latina';onScroll();};
  // back arrow: inside a lesson/text go up one level; on main pages go back to Taskist if we came from it
  const fromT=(()=>{try{return sessionStorage.getItem('latin.from')==='taskist'}catch(e){return false}})();
  window.afterRoute=function(h){const up=/^lesson-/.test(h)?'#learn':/^read-/.test(h)?'#read':h==='ref'?'#home':null;
