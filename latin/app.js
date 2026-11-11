@@ -7,7 +7,7 @@ const today=()=>Math.floor((Date.now()-new Date().getTimezoneOffset()*6e4)/864e5
 
 // ---------- state ----------
 const KEY='latin2y_v1';
-let S={done:{},srs:{},streak:{d:0,n:0},stats:{r:0,t:0},newDay:{d:0,n:0},wDone:{}};
+let S={done:{},srs:{},streak:{d:0,n:0},stats:{r:0,t:0},newDay:{d:0,n:0},wDone:{},miss:{},tried:{}};
 try{const x=JSON.parse(localStorage.getItem(KEY));if(x)S=Object.assign(S,x);}catch(e){}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
 function bump(ok){const t=today();if(S.streak.d!==t){S.streak.n=(S.streak.d===t-1)?S.streak.n+1:1;S.streak.d=t;}if(ok!==undefined){S.stats.t++;if(ok)S.stats.r++;}save();hdr();}
@@ -34,12 +34,12 @@ function renderBody(b){
 }
 
 // ---------- router ----------
-const VIEWS={home,learn,drill,words,read,write,ref};
+const VIEWS={home,learn,drill,words,read,write,ref,review};
 let firstRoute=true,routeT=0;
 function route(){const h=(location.hash||'#home').slice(1);
   document.querySelectorAll('nav a').forEach(a=>a.classList.toggle('on',h.startsWith(a.dataset.v)));
   const run=()=>{let m;const main=$('#main');main.scrollTop=0;window.scrollTo(0,0);
-    if((m=h.match(/^lesson-(\d+)$/)))lesson(+m[1]);else if((m=h.match(/^read-(\d+)$/)))readText(+m[1]);else (VIEWS[h]||home)();
+    if((m=h.match(/^lesson-(\d+)$/)))lesson(+m[1]);else if((m=h.match(/^learn-(\d+)$/)))learn(+m[1]);else if((m=h.match(/^read-(\d+)$/)))readText(+m[1]);else (VIEWS[h]||home)();
     if(window.afterRoute)afterRoute(h);};
   const main=$('#main');
   if(firstRoute||matchMedia('(prefers-reduced-motion: reduce)').matches){firstRoute=false;run();return;}
@@ -53,32 +53,77 @@ function setMain(html){$('#main').innerHTML=html;if(window.afterRender)afterRend
 function curLesson(){for(let i=0;i<LESSONS.length;i++)if(!S.done[i+1])return i+1;return LESSONS.length;}
 function learnedCount(){return Object.values(S.srs).filter(c=>c.b>=2).length;}
 function dueCount(){const t=today();return Object.values(S.srs).filter(c=>c.due<=t).length;}
+function ring(p,size,label){const r=size/2-5,c=2*Math.PI*r;return `<svg class=ring width=${size} height=${size} viewBox="0 0 ${size} ${size}"><circle cx=${size/2} cy=${size/2} r=${r} class=rt /><circle cx=${size/2} cy=${size/2} r=${r} class=rf style="stroke-dasharray:${c};stroke-dashoffset:${c};--off:${c*(1-p)}" transform="rotate(-90 ${size/2} ${size/2})"/>${label?`<text x=50% y=50% dominant-baseline=central text-anchor=middle>${label}</text>`:''}</svg>`;}
+function missCount(){return Object.keys(S.miss||{}).length;}
+function tryCount(n){return ((window.TRY||{})[n]||[]).length;}
+const LAUREL=(()=>{const cx=60,cy=8,r=50;let g='';[-1,1].forEach(side=>{let d='';for(let k=0;k<=24;k++){const a=(90+side*(8+k*4.2))*Math.PI/180,x=cx+r*Math.cos(a),y=cy+r*Math.sin(a);d+=(k?'L':'M')+x.toFixed(1)+' '+y.toFixed(1)}g+=`<path d="${d}"/>`;
+  for(let k=1;k<=6;k++){const deg=90+side*(8+k*15),a=deg*Math.PI/180,x=cx+r*Math.cos(a),y=cy+r*Math.sin(a),tan=deg+90*side;[-1,1].forEach(o=>{const lx=x+o*6*Math.cos(a),ly=y+o*6*Math.sin(a);g+=`<ellipse cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" rx="6.5" ry="2.6" transform="rotate(${(tan+o*side*-28).toFixed(0)} ${lx.toFixed(1)} ${ly.toFixed(1)})"/>`})}});
+  return `<svg class=laurel viewBox="0 0 120 64" aria-hidden=true><g fill=none stroke=currentColor stroke-width=1.5 stroke-linecap=round>${g}</g></svg>`})();
 function home(){
   const cl=curLesson(),done=Object.keys(S.done).length,phase=PLAN.findIndex(p=>cl>=p.l[0]&&cl<=p.l[1]);
-  const acc=S.stats.t?Math.round(100*S.stats.r/S.stats.t):0;
-  setMain(`<section class=hero><h1>Lingua Latina</h1><p>Read and write Classical Latin in two years, one step a day.</p></section>
+  const acc=S.stats.t?Math.round(100*S.stats.r/S.stats.t):0,L=LESSONS[cl-1],mc=missCount(),allDone=done>=LESSONS.length;
+  const hr=new Date().getHours(),greet=hr<12?'Salvē! Good morning':hr<18?'Salvē! Good afternoon':'Salvē! Good evening';
+  setMain(`<section class=hero2>${LAUREL}<div class=hg>${greet}</div><h1>Lingua Latina</h1><p>Read and write Classical Latin, one small step a day.</p></section>
+  <a class="card cont" href="#lesson-${cl}">${ring(done/LESSONS.length,64,`${done}<tspan class=rs>/50</tspan>`)}<div class=ctx><span class=xk>${allDone?'Course complete · revisit':done?'Continue':'Start here'} · Unit ${L.u+1}</span><b>${cl}. ${esc(L.t)}</b><small>${UNITS[L.u]}${tryCount(cl)?` · ${tryCount(cl)} Try-its`:''}</small></div><span class=go aria-hidden=true><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>
+  ${mc?`<a class="card rev" href="#review"><span class=rvn>${mc}</span><div><b>Review weak spots</b><small>Questions you missed. Get them right to clear them.</small></div></a>`:''}
   <div class=card><h3>Today</h3>
    <a class=todo href="#words"><b>Words</b><span>${dueCount()} due · ${Math.max(0,10-(S.newDay.d==today()?S.newDay.n:0))} new available</span></a>
-   <a class=todo href="#lesson-${cl}"><b>Lesson ${cl}</b><span>${esc(LESSONS[cl-1].t)}</span></a>
    <a class=todo href="#drill"><b>Drill</b><span>Practise forms until they're automatic</span></a>
    <a class=todo href="#read"><b>Read</b><span>Tap any word for help</span></a>
    <a class=todo href="#write"><b>Write</b><span>English → Latin sentences</span></a></div>
-  <div class=stats><div><b>${done}/50</b><span>lessons</span></div><div><b>${learnedCount()}</b><span>words known</span></div><div><b>${acc}%</b><span>accuracy</span></div></div>
-  <div class=bar><i style="width:${done*2}%"></i></div>
+  <div class=stats><div><b>${done}<small>/50</small></b><span>lessons</span></div><div><b>${learnedCount()}</b><span>words known</span></div><div><b>${acc}%</b><span>accuracy</span></div></div>
+  <div class=card><h3>Units</h3><div class=ugrid>${UNITS.map((u,ui)=>{const ls=LESSONS.map((l,i)=>[l,i+1]).filter(x=>x[0].u==ui),d=ls.filter(x=>S.done[x[1]]).length;return `<a class="ucell ${d==ls.length?'full':ls.some(x=>x[1]==cl)?'now':''}" href="#learn-${ui}"><span class=un>${ui+1}</span><span class=ubar><i style="width:${100*d/ls.length}%"></i></span><small>${esc(u)}</small></a>`}).join('')}</div></div>
   <div class=card><h3>Daily routine (≈ 50 min)</h3>${DAILY.map(d=>`<div class=row><b>${d[0]}</b><span>${d[1]}</span></div>`).join('')}</div>
   <div class=card><h3>The 2-year plan</h3>${PLAN.map((p,i)=>`<details ${i==phase?'open':''} class="phase ${i==phase?'now':''}"><summary><b>${p.m}</b> <span>Lessons ${p.l[0]}${p.l[1]!=p.l[0]?'–'+p.l[1]:''} · ${p.words} words</span></summary><p><b>Goal:</b> ${p.goal}</p><p><b>Read:</b> ${p.read}</p></details>`).join('')}
   <p class=note>Companion book (optional but recommended): <i>Lingua Latina per se Illustrata</i>, Part I <i>Familia Romana</i> and Part II <i>Roma Aeterna</i>, by Hans Ørberg.</p></div>
   <div class=card><h3>Your data</h3><p class=note>Progress is saved in this browser only.</p><button class="btn ghost" id=reset>Reset all progress</button></div>`);
-  $('#reset').onclick=e=>{if(e.target.dataset.c){S={done:{},srs:{},streak:{d:0,n:0},stats:{r:0,t:0},newDay:{d:0,n:0},wDone:{}};save();hdr();home();}else{e.target.dataset.c=1;e.target.textContent='Tap again to confirm';}};
+  $('#reset').onclick=e=>{if(e.target.dataset.c){S={done:{},srs:{},streak:{d:0,n:0},stats:{r:0,t:0},newDay:{d:0,n:0},wDone:{},miss:{},tried:{}};save();hdr();home();}else{e.target.dataset.c=1;e.target.textContent='Tap again to confirm';}};
+  ringIn();
 }
+function ringIn(){requestAnimationFrame(()=>requestAnimationFrame(()=>document.querySelectorAll('.ring .rf').forEach(c=>c.style.strokeDashoffset=c.style.getPropertyValue('--off'))));}
 
 // ---------- learn ----------
-function learn(){
-  let h='<h2>Grammar course</h2><p class=sub>50 lessons covering all of Latin grammar. Each has explanations, tables, examples, a quiz and a drill.</p>';
-  UNITS.forEach((u,ui)=>{h+=`<h3 class=unit>Unit ${ui+1}: ${u}</h3><div class=list>`;
-    LESSONS.forEach((l,i)=>{if(l.u==ui)h+=`<a href="#lesson-${i+1}" class="li ${S.done[i+1]?'done':''}"><span class=num>${i+1}</span><span>${esc(l.t)}</span><span class=tick>${S.done[i+1]?'✓':''}</span></a>`;});h+='</div>';});
-  setMain(h);
+function learn(focus){
+  const cl=curLesson(),done=Object.keys(S.done).length;
+  let h=`<h2>Course</h2><div class=lhd>${ring(done/LESSONS.length,52,Math.round(100*done/LESSONS.length)+'%')}<p class=sub>50 lessons, 7 units. Each one tells the story of one idea, with Try-its as you go, a quiz and a drill.</p></div>`;
+  UNITS.forEach((u,ui)=>{const ls=LESSONS.map((l,i)=>[l,i+1]).filter(x=>x[0].u==ui),d=ls.filter(x=>S.done[x[1]]).length;
+    h+=`<section class="umap ${d==ls.length?'full':''}" id=unit-${ui}><div class=uhd><span class=ub>Unit ${ui+1}</span><b>${esc(u)}</b><span class=uc>${d}/${ls.length}</span></div><ol class=path>`;
+    ls.forEach(([l,n],k)=>{const st=S.done[n]?'done':n==cl?'cur':'fut',t=S.tried[n]||0,tc=tryCount(n);
+      h+=`<li class="node ${st}${k<ls.length-1&&S.done[n]&&S.done[ls[k+1][1]]?' lk':''}"><a href="#lesson-${n}"><span class=dot>${st=='done'?'<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>':n}</span><span class=nt>${esc(l.t)}<small>${st=='cur'?'Up next':st=='done'?'Completed':'Lesson '+n}${tc&&(t||st!=="fut")?` · Try-its ${Math.min(t,tc)}/${tc}`:''}</small></span></a></li>`;});
+    h+='</ol></section>';});
+  setMain(h);ringIn();
+  const tgt=typeof focus==='number'?document.getElementById('unit-'+focus):document.querySelector('.node.cur');
+  if(tgt&&(typeof focus==='number'||done))setTimeout(()=>{const y=tgt.getBoundingClientRect().top+scrollY-(typeof focus==='number'?70:200);scrollTo({top:Math.max(0,y),behavior:'smooth'})},260);
 }
+
+function markMiss(k,ok){S.miss=S.miss||{};if(ok)delete S.miss[k];else S.miss[k]=1;}
+function tryCard(q,key){return `<div class="card try" data-k="${key}"><div class=tyk><svg viewBox="0 0 24 24"><path d="M12 20h8.5"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>Try it</div><p class=tq>${q[0].replace(/<i>/g,'<i class=la>')}</p><div class=opts>${shuffle(q[1].map((o,i)=>i)).map(i=>`<button class=opt data-i=${i}>${q[1][i].replace(/<i>/g,'<i class=la>')}</button>`).join('')}</div><div class=tfb></div></div>`;}
+function wireTry(el,q,onDone){el.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{const ok=+b.dataset.i===q[2];
+  el.querySelectorAll('.opt').forEach(x=>{x.disabled=true;if(+x.dataset.i===q[2])x.classList.add('right')});if(!ok)b.classList.add('wrong');
+  el.classList.add(ok?'got':'miss');const fb=el.querySelector('.tfb');fb.innerHTML=`<p class="${ok?'ok':'no'}">${ok?rnd(['Rēctē! Right.','Optimē! Exactly.','Bene! Correct.']):'Not quite.'}</p><p class=why>${q[3].replace(/<i>/g,'<i class=la>')}</p>${ok?'':'<button class="btn ghost tra">Try again</button>'}`;
+  const ta=fb.querySelector('.tra');if(ta)ta.onclick=()=>{const nw=document.createElement('div');nw.innerHTML=tryCard(q,el.dataset.k);const c=nw.firstChild;el.replaceWith(c);wireTry(c,q,onDone)};
+  bump(ok);onDone(ok)});}
+function placeTries(n,TR){const art=document.querySelector('.story');if(!art)return;
+  const anchors=[...art.querySelectorAll(':scope > h4')].slice(1);const sum=art.querySelector(':scope > .sum');if(sum)anchors.push(sum);
+  let got=0;TR.forEach((q,i)=>{const k='t:'+n+':'+i,wrap=document.createElement('div');wrap.innerHTML=tryCard(q,k);const el=wrap.firstChild;
+   const ai=anchors.length?Math.min(anchors.length-1,Math.max(0,Math.ceil((i+1)*anchors.length/TR.length)-1)):-1;
+   if(ai>=0)art.insertBefore(el,anchors[ai]);else art.appendChild(el);
+   wireTry(el,q,ok=>{markMiss(k,ok);if(ok){got++;S.tried[n]=Math.max(S.tried[n]||0,got);save();const c=$('#trc');if(c){c.textContent=`Try-its ${Math.min(S.tried[n],TR.length)}/${TR.length}`;c.classList.add('pop');setTimeout(()=>c.classList.remove('pop'),400)}}else save();})});}
+let rpOn=false;
+function readProgress(){const upd=()=>{const b=$('#rprog');if(!b)return;const h=document.documentElement.scrollHeight-innerHeight;b.firstChild.style.transform=`scaleX(${h>0?Math.min(1,scrollY/h):0})`};
+  if(!rpOn){rpOn=true;addEventListener('scroll',()=>requestAnimationFrame(upd),{passive:true})}upd();}
+function review(){const keys=Object.keys(S.miss||{});
+  const pool=keys.map(k=>{const [t,n,i]=k.split(':');const q=t==='t'?((window.TRY||{})[n]||[])[i]:(LESSONS[n-1]&&LESSONS[n-1].q[i]);if(!q)return null;
+    return t==='t'?{k,n:+n,q}:{k,n:+n,q:[esc(q[0]),q[1].map(esc),q[2],esc(q[3]||'')]}}).filter(Boolean);
+  if(!pool.length){setMain(`<h2>Review</h2><div class="card empty">${LAUREL}<p class=big>Nothing to review</p><p class=note>Questions you get wrong in lessons land here. Clear them by getting them right.</p><a class=btn href="#learn">Back to the course</a></div>`);return;}
+  const qs=shuffle(pool).slice(0,10);let i=0,right=0;
+  setMain(`<h2>Review</h2><p class=sub>${pool.length} weak spot${pool.length>1?'s':''}. Get one right and it's cleared.</p><div class=bar><i id=rvb style="width:0"></i></div><div id=rvq></div>`);
+  const show=()=>{const it=qs[i];$('#rvb').style.width=(100*i/qs.length)+'%';
+    if(!it){$('#rvq').innerHTML=`<div class="card empty">${LAUREL}<p class=big>${right}/${qs.length} cleared</p><p class=note>${missCount()?missCount()+' still to go.':'All clear. Bene factum!'}</p>${missCount()?'<button class=btn id=rva>Keep going</button>':''}<a class="btn ghost" href="#home">Home</a></div>`;const a=$('#rva');if(a)a.onclick=review;return;}
+    $('#rvq').innerHTML=`<div class=crumb style="margin-top:12px">From lesson ${it.n}: ${esc(LESSONS[it.n-1].t)}</div>`+tryCard(it.q,it.k);
+    const el=$('#rvq .try');el.querySelector('.tyk').lastChild.textContent='Review';
+    wireTry(el,it.q,ok=>{markMiss(it.k,ok);if(ok)right++;save();const nb=document.createElement('button');nb.className='btn';nb.textContent=i<qs.length-1?'Next':'Finish';nb.onclick=()=>{i++;show();scrollTo(0,0)};el.querySelector('.tfb').appendChild(nb)})};
+  show();}
 function lesson(n){
   const L=LESSONS[n-1];if(!L)return learn();
   const X=(window.EXPL||{})[n];
@@ -87,7 +132,9 @@ function lesson(n){
   const NR=(window.NARR||{})[n],nx=LESSONS[n];
   const story=NR?`<article class="lesson story">${renderBody(NR)}</article>`:`${xTop}<article class=lesson>${renderBody(L.b)}</article>${xEnd}`;
   const details=NR?`<details class="card dtl"><summary><h3>Tables & details</h3></summary><p class=note>Everything from this lesson in compact form, for looking things up later.</p><article class=lesson>${renderBody(L.b)}</article>${xEnd.replace('<div class="card xs">','<div class="xs">')}</details>`:'';
-  setMain(`<div class=crumb><a href="#learn">Course</a> · Lesson ${n} of ${LESSONS.length}</div><h2>${esc(L.t)}</h2>${story}
+  const TR=(window.TRY||{})[n]||[],mins=NR?Math.max(3,Math.round(NR.replace(/<[^>]+>|\[\[[^\]]+\]\]/g,' ').split(/\s+/).length/170)):0;
+  setMain(`<div class=rprog id=rprog><i></i></div><div class=crumb><a href="#learn-${L.u}">Unit ${L.u+1}</a> · Lesson ${n} of ${LESSONS.length}</div><h2>${esc(L.t)}</h2>
+  <div class=lmeta>${mins?`<span>≈ ${mins} min</span>`:''}${TR.length?`<span id=trc>Try-its ${Math.min(S.tried[n]||0,TR.length)}/${TR.length}</span>`:''}${S.done[n]?'<span class=dn>Completed ✓</span>':''}</div>${story}
   ${L.dr?`<button class="btn" id=prac>Practise these forms →</button>`:''}
   <div class=card><h3>Check yourself</h3><div id=quiz></div></div>
   ${details}
@@ -95,13 +142,15 @@ function lesson(n){
   ${nx?`<a class="card nxt" href="#lesson-${n+1}"><span class=xk>Next lesson</span><b>${n+1}. ${esc(nx.t)}</b><span class=nar>→</span></a>`:''}`);
   if(L.dr)$('#prac').onclick=()=>{DR.preset=L.dr;go('drill');};
   $('#mark').onclick=()=>{S.done[n]=S.done[n]?0:1;if(!S.done[n])delete S.done[n];save();bump();lesson(n);};
+  if(NR&&TR.length)placeTries(n,TR);
+  readProgress();
   let qi=0,score=0;const qs=L.q;
   function showQ(){const q=qs[qi];if(!q){$('#quiz').innerHTML=`<p class=big>${score}/${qs.length} correct</p>${score>=qs.length-1?'<p>Lesson complete ✓</p>':'<p>Review the lesson and try again.</p>'}<button class="btn ghost" id=again>Retry quiz</button>`;
       if(score>=qs.length-1&&!S.done[n]){S.done[n]=1;save();$('#mark').textContent='Completed ✓';$('#mark').classList.add('ghost');}
       $('#again').onclick=()=>{qi=0;score=0;showQ();};return;}
     const order=shuffle(q[1].map((o,i)=>i));
     $('#quiz').innerHTML=`<p class=qn>${qi+1}/${qs.length}</p><p class=q>${esc(q[0])}</p><div class=opts>${order.map(i=>`<button class=opt data-i=${i}>${esc(q[1][i])}</button>`).join('')}</div><div id=fb></div>`;
-    document.querySelectorAll('#quiz .opt').forEach(b=>b.onclick=()=>{const ok=+b.dataset.i===q[2];if(ok)score++;bump(ok);
+    document.querySelectorAll('#quiz .opt').forEach(b=>b.onclick=()=>{const ok=+b.dataset.i===q[2];if(ok)score++;markMiss('q:'+n+':'+qi,ok);bump(ok);
       document.querySelectorAll('#quiz .opt').forEach(x=>{x.disabled=true;if(+x.dataset.i===q[2])x.classList.add('right');});if(!ok)b.classList.add('wrong');
       $('#fb').innerHTML=`<p class="${ok?'ok':'no'}">${ok?'Correct.':'Not quite.'} ${esc(q[3]||'')}</p><button class=btn id=nq>Next</button>`;$('#nq').onclick=()=>{qi++;showQ();};});}
   showQ();
