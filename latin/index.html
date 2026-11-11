@@ -153,6 +153,17 @@ nav a.on .nin{clip-path:circle(44px at 18% 88%)}
 nav .nio{transition:opacity .12s .3s}nav a.on .nio{opacity:0}nav a:not(.on) .nio{transition-delay:0s}
 nav.noan *,nav.noan{transition:none!important}
 @media (min-width:760px){nav{max-width:720px;margin:0 auto;border-radius:24px 24px 0 0}}
+/* colour-coded sentences */
+:root{--rs:#2563c9;--rv:var(--acc);--ro:#2f8a4a;--rg:#8a4fbf;--rd:#b06d12;--ra:#13808a;--rp:#5b6b7f;--rx:#b8467e}
+:root[data-th=dark]{--rs:#7fb0ff;--ro:#79c98f;--rg:#c49bf0;--rd:#f0c068;--ra:#6fd0cf;--rp:#a7b4c6;--rx:#f39cc6}
+.r-subj{--rc:var(--rs)}.r-verb,.r-inf{--rc:var(--rv)}.r-obj{--rc:var(--ro)}.r-gen{--rc:var(--rg)}.r-dat{--rc:var(--rd)}.r-abl,.r-abs{--rc:var(--ra)}.r-prep{--rc:var(--rp)}.r-accs{--rc:var(--rx)}.r-pred{--rc:var(--rs)}.r-voc,.r-adv,.r-link{--rc:var(--mute)}
+.ex .la.coded{line-height:2.05}
+.ex .la .cw{color:var(--rc);text-decoration:none!important;border-bottom:2.5px solid color-mix(in srgb,var(--rc) 70%,transparent);padding:0 1px 1px;border-radius:2px;font-weight:600}
+.ex .la .cw.gon{background:color-mix(in srgb,var(--rc) 18%,transparent)}
+.leg{display:flex;flex-wrap:wrap;gap:4px 6px;margin-top:8px}
+.leg .lg{font-size:11px;font-weight:600;letter-spacing:.02em;color:var(--rc);background:color-mix(in srgb,var(--rc) 13%,transparent);padding:2px 8px;border-radius:10px;font-family:inherit}
+#gb .gbrole{border-radius:12px;padding:8px 10px;margin:-2px 0 10px;background:color-mix(in srgb,var(--rc) 14%,transparent);display:flex;flex-direction:column;gap:2px}
+#gb .gbrole b{color:var(--rc);font-size:14px}#gb .gbrole span{font-size:12.5px;color:var(--ink)}
 /* story lessons */
 .story p{font-size:16.5px;line-height:1.65;margin:0 4px 14px}
 .story h4{margin:26px 4px 8px}
@@ -186,6 +197,27 @@ nav.noan *,nav.noan{transition:none!important}
 #gb .gbm{font-size:15.5px;margin-top:2px}
 #gb .gbx{color:var(--mute);font-size:13.5px;margin-top:6px}
 #gb .gbl{color:var(--mute);font-size:13px;margin-top:4px}
+#gb .gbtop{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+#gb .gbpos{font-size:11.5px;color:var(--acc);background:color-mix(in srgb,var(--acc) 12%,transparent);padding:2px 8px;border-radius:10px;font-weight:500}
+#gb .gbk2{font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--mute);margin:10px 0 4px}
+#gb .gbl2{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px}
+#gb .gbl2 li{background:var(--card2);border-radius:10px;padding:6px 10px;display:flex;flex-direction:column}
+#gb .gbl2 li span{font-size:14.5px;font-weight:500}#gb .gbl2 li small{font-size:11.5px;color:var(--mute)}
+#gb .gbl2 li.on{background:color-mix(in srgb,var(--acc) 15%,var(--card2));box-shadow:inset 3px 0 0 var(--acc)}#gb .gbl2:has(.on) li:not(.on){opacity:.75}
+#gb .gbhint{font-size:12px;color:var(--mute);margin-top:6px;font-style:italic}
+#gb .gbd{font-size:13px;color:var(--mute);margin-top:10px}#gb .gbd .la{color:var(--ink);font-size:15px}
+#gb .gbb{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+#gb .gbbtn{background:var(--acc);color:#fff;border-radius:16px;padding:6px 12px;font-size:13px;font-weight:600}
+#gb .gbbtn.ghost{background:var(--card2);color:var(--acc)}
+#gb{max-height:70vh;overflow-y:auto}
+.tsh{position:fixed;inset:0;z-index:45}
+.tsc{position:absolute;inset:0;background:rgba(0,0,0,.35);opacity:0;transition:opacity .22s}
+.tsp{position:absolute;left:0;right:0;bottom:0;max-height:84vh;overflow-y:auto;background:var(--bg);border-radius:24px 24px 0 0;padding:6px 14px calc(20px + env(safe-area-inset-bottom));transform:translateY(30px);opacity:0;transition:transform .28s cubic-bezier(.2,.8,.3,1),opacity .22s}
+.tsh.in .tsc{opacity:1}.tsh.in .tsp{transform:none;opacity:1}
+.tsh.out .tsc{opacity:0}.tsh.out .tsp{transform:translateY(30px);opacity:0;transition-duration:.2s}
+.tsg{width:40px;height:5px;border-radius:3px;background:var(--line);margin:6px auto 10px}
+.tshd{display:flex;align-items:flex-start;gap:8px;margin:0 2px 6px}.tshd>div{flex:1}.tshd .gbh{font-size:22px;font-weight:600}.tshd .gbk{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--acc)}.tshd .gbm{color:var(--mute);font-size:14px}
+@media (min-width:760px){.tsp{max-width:720px;margin:0 auto}}
 #gb .gbi+.gbi{margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
 @media (prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 </style>
@@ -221,5 +253,6 @@ nav.noan *,nav.noan{transition:none!important}
 <script src="app.js"></script>
 <script src="motion.js"></script>
 <script src="gloss.js"></script>
+<script src="colour.js"></script>
 </body>
 </html>

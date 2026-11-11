@@ -92,40 +92,125 @@
  const GKEYS=Object.keys(G).sort((a,b)=>b.length-a.length);
  const GRX=new RegExp('\\b('+GKEYS.map(k=>k.replace(/ /g,'\\s+')).join('|')+')\\b','gi');
 
- // ---------- Latin word index: every form → what it is ----------
+
+ // ---------- Latin word index: every form → structured analyses ----------
  const IDX=new Map();
  const key=s=>plain(s).replace(/\s+/g,'');
- const add=(form,lemma,mean,desc)=>{if(!form||form==='—')return;form=String(form).trim();if(/\s/.test(form))return;
+ const VBY=new Map();VOCAB.forEach(w=>VBY.set(w.lem,w));
+ function add(form,lemma,mean,a,extra){if(!form||form==='—')return;form=String(form).trim();if(/\s/.test(form))return;
   const k=key(form);if(!k)return;let e=IDX.get(k);if(!e){e=[];IDX.set(k,e);}
-  let it=e.find(x=>x.lemma===lemma);if(!it){it={lemma,mean,descs:[],forms:new Set()};e.push(it);}
-  if(desc&&!it.descs.includes(desc))it.descs.push(desc);if(desc)(it.dd=it.dd||[]).push({f:form.toLowerCase(),d:desc});it.forms.add(form);};
- const PW={'1st sg':'I','2nd sg':'you','3rd sg':'he / she / it','1st pl':'we','2nd pl':'you (plural)','3rd pl':'they'};const CN={Nom:'nominative',Gen:'genitive',Dat:'dative',Acc:'accusative',Abl:'ablative',Voc:'vocative'};
+  let it=e.find(x=>x.lemma===lemma);if(!it){it=Object.assign({lemma,mean,an:[]},extra||{});e.push(it);}
+  if(a){a.f=form.toLowerCase();it.an.push(a)}}
+ const CS=['Nom','Gen','Dat','Acc','Abl','Voc'];
  function build(){
-  VOCAB.forEach(w=>add(w.lem.split(',')[0].replace(/\s*\(.*$/,''),w.lem,w.mean,null));
-  NOUNS.forEach(n=>{try{const d=declineNoun(n);['sg','pl'].forEach(k=>CASES.forEach((c,i)=>add(d[k][i],n.lem,n.mean,CN[c]+' '+(k==='sg'?'singular':'plural'))))}catch(e){}});
-  ADJS.forEach(a=>{try{const d=declineAdj(a);[['m','masculine'],['f','feminine'],['n','neuter']].forEach(([g,gn])=>['sg','pl'].forEach(k=>CASES.forEach((c,i)=>add(d[g][k][i],a.lem,a.mean,gn+' '+CN[c]+' '+(k==='sg'?'singular':'plural')))))}catch(e){}});
-  VERBS.forEach(v=>{try{
-   const vcs=v.dep?['P']:['A','P'];
-   [['ind',TENSES.ind],['sub',TENSES.sub]].forEach(([m,ts])=>ts.forEach(t=>vcs.forEach(vc=>{const f=conj(v,m,t,vc);if(!f)return;
-    f.forEach((x,p)=>add(x,v.lem,v.mean,PW[PERS[p]]+' — '+TNAME[t].toLowerCase()+(v.dep?'':vc==='A'?' active':' passive')+(m==='ind'?' indicative':' subjunctive')))})));
-   const pdecl=(stem,lab)=>{const d=declineAdj({t:'12',parts:[stem+'us',stem+'a',stem+'um']});[['m','masculine'],['f','feminine'],['n','neuter']].forEach(([g,gn])=>['sg','pl'].forEach(k=>CASES.forEach((c,i)=>add(d[g][k][i],v.lem,v.mean,lab+' — '+gn+' '+CN[c]+' '+(k==='sg'?'singular':'plural')))))};
-   if(v.ppp){pdecl(v.ppp,v.dep?'perfect participle (having ___ed)':'perfect passive participle (having been ___ed)');pdecl(v.ppp+'ūr','future participle (about to ___)')}
-   Object.entries(nonFinite(v)).forEach(([lab,val])=>String(val).split(',').forEach(x=>{x=x.replace(/\(.*?\)/g,'').trim();if(x&&!x.startsWith('-'))add(x,v.lem,v.mean,lab.toLowerCase())}));
+  VOCAB.forEach(w=>add(w.lem.split(',')[0].replace(/\s*\(.*$/,'').trim(),w.lem,w.mean,null,{w}));
+  VOCAB.filter(w=>w.code==='prep').forEach(w=>w.lem.split(',').slice(1).map(x=>x.trim()).filter(x=>/^[a-zā-ūī]+$/i.test(x)).forEach(x=>add(x,w.lem,w.mean,null,{w})));
+  NOUNS.forEach(n=>{try{const w=VBY.get(n.lem),d=declineNoun(n);['sg','pl'].forEach(k=>CS.forEach((c,i)=>add(d[k][i],n.lem,n.mean,{k:'n',c,n:k,g:n.g},{w,noun:n})))}catch(e){}});
+  ADJS.forEach(a=>{try{const w=VBY.get(a.lem),d=declineAdj(a);['m','f','n'].forEach(g=>['sg','pl'].forEach(k=>CS.forEach((c,i)=>add(d[g][k][i],a.lem,a.mean,{k:'adj',c,n:k,g},{w,adj:a}))))}catch(e){}});
+  VERBS.forEach(v=>{try{const w=VBY.get(v.lem),X={w,verb:v};
+   (v.dep?['P']:['A','P']).forEach(vc=>[['ind',TENSES.ind],['sub',TENSES.sub]].forEach(([m,ts])=>ts.forEach(t=>{const f=conj(v,m,t,vc);if(!f)return;f.forEach((x,p)=>add(x,v.lem,v.mean,{k:'v',p:p%3+1,n:p<3?'sg':'pl',t,vo:vc,m,dep:v.dep},X))})));
+   const pd=(stem,pt)=>{const d=declineAdj({t:'12',parts:[stem+'us',stem+'a',stem+'um']});['m','f','n'].forEach(g=>['sg','pl'].forEach(k=>CS.forEach((c,i)=>add(d[g][k][i],v.lem,v.mean,{k:'part',pt,c,n:k,g,dep:v.dep},X))))};
+   if(v.ppp){pd(v.ppp,'perf');pd(v.ppp+'ūr','fut')}
+   const nf=nonFinite(v);Object.entries(nf).forEach(([lab,val])=>String(val).split(',').forEach(x=>{x=x.replace(/\(.*?\)/g,'').trim();if(!x||x.startsWith('-'))return;
+    if(/participle/i.test(lab)&&!/present participle/i.test(lab))return;let a={k:'nf',lab:lab.toLowerCase(),dep:v.dep};
+    if(/present participle/i.test(lab)){a={k:'part',pt:'pres',c:'Nom',n:'sg',g:'m',dep:v.dep}}
+    else if(/imperative/i.test(lab)){a={k:'imp',n:x.endsWith('te')||x.endsWith('minī')?'pl':'sg',dep:v.dep}}
+    add(x,v.lem,v.mean,a,X)}));
+   if(nf['Present participle']){const st=nf['Present participle'].split(', ')[1].slice(0,-2);const pp={sg:[null,st+'is',st+'ī',st+'em',st+'e'],pl:[st+'ēs',st+'ium',st+'ibus',st+'ēs',st+'ibus']};['sg','pl'].forEach(k=>pp[k].forEach((f,i)=>{if(f)add(f,v.lem,v.mean,{k:'part',pt:'pres',c:CS[i],n:k,g:'mf',dep:v.dep},X)}))}
   }catch(e){}});
-  Object.entries(IRR).forEach(([k,v])=>{const lem=v.pp,mean=v.mean;
-   ['ind','sub'].forEach(m=>Object.entries(v[m]).forEach(([t,s])=>{if(s.includes(';'))return;s.replace(/nōn /g,'nōn_').split(' ').forEach((x,p)=>{if(x.includes('_'))return;add(x,lem,mean,PW[PERS[p]]+' — '+TNAME[t].toLowerCase()+(m==='ind'?' indicative':' subjunctive'))})}));});
-  Object.entries(PRON).forEach(([name,p])=>Object.entries(p.rows).forEach(([c,row])=>row.forEach((cell,i)=>String(cell).split('/').forEach(x=>{x=x.replace(/\(.*?\)/g,'').trim();if(x&&!x.startsWith('=')&&x!=='—')add(x,name,'pronoun',CN[c]+' '+p.cols[i])}))));
+  [['dīc','dīcō'],['dūc','dūcō'],['fac','faciō'],['fer','ferō']].forEach(([f,l])=>{const v=VERBS.find(x=>x.parts[0]===l);const w=VOCAB.find(x=>x.lem.split(',')[0]===l);if(w)add(f,w.lem,w.mean,{k:'imp',n:'sg'},v?{w,verb:v}:{w,irr:l})});
+  Object.entries(IRR).forEach(([k,v])=>{const w=VOCAB.find(x=>x.lem.split(',')[0]===k);const lem=w?w.lem:v.pp,mean=w?w.mean:v.mean;
+   ['ind','sub'].forEach(m=>Object.entries(v[m]).forEach(([t,s])=>{if(s.includes(';'))return;s.replace(/nōn /g,'nōn_').split(' ').forEach((x,p)=>{if(x.includes('_'))return;add(x,lem,mean,{k:'v',p:p%3+1,n:p<3?'sg':'pl',t,vo:'A',m,irr:k},{w,irr:k})})}));});
+  // infinitives & compounds of irregular verbs
+  const IRC={sum:['ad','ab','prō','dē'],'eō':['red','ex','ab','ad','per','in','sub','trāns']};
+  Object.entries(IRR).forEach(([k,v])=>{const w=VOCAB.find(x=>x.lem.split(',')[0]===k);const lem=w?w.lem:v.pp,mean=w?w.mean:v.mean,inf=(v.pp||'').split(', ')[1];
+   if(inf)add(inf,lem,mean,{k:'nf',lab:'present infinitive',irr:k},{w,irr:k});
+   (IRC[k]||[]).forEach(pre=>{const cm={ad:['be present','approach'],ab:['be away','go away'],'prō':['be useful'],'dē':['be lacking'],red:[,'go back, return'],ex:[,'go out'],per:[,'perish, die'],in:[,'go into, enter'],sub:[,'go under'],'trāns':[,'go across']}[pre][k==='sum'?0:1];if(!cm)return;
+    const cl=pre+k+', '+pre+inf;add(pre+inf,cl,cm,{k:'nf',lab:'present infinitive',irr:k},{irr:k});
+    ['ind','sub'].forEach(m=>Object.entries(v[m]).forEach(([t,s])=>{if(s.includes(';'))return;s.split(' ').forEach((x,p)=>{if(x==='nōn')return;add(pre+x,cl,cm,{k:'v',p:p%3+1,n:p<3?'sg':'pl',t,vo:'A',m,irr:k},{irr:k})})}))})});
+  [['nōlī','sg'],['nōlīte','pl']].forEach(([f,n])=>{const w=VOCAB.find(x=>x.lem.startsWith('nōlō'));if(w)add(f,w.lem,'don\'t …! (with an infinitive)',{k:'imp',n},{w,irr:'nōlō'})});
+  // domus (4th decl., irregular)
+  {const w=VOCAB.find(x=>x.lem.startsWith('domus,'));if(w){const F={sg:['domus','domūs','domuī','domum','domō','domus'],pl:['domūs','domuum','domibus','domōs','domibus','domūs']};['sg','pl'].forEach(k=>F[k].forEach((f,i)=>add(f,w.lem,w.mean,{k:'n',c:CS[i],n:k,g:'f'},{w})));add('domī',w.lem,'at home',{k:'adv'},{w})}}
+  // gerunds & gerundives
+  VERBS.forEach(v=>{try{const w=VBY.get(v.lem),X={w,verb:v},st=v.root+{1:'and',2:'end',3:'end','3io':'iend',4:'iend'}[v.c];
+   [['Gen','ī'],['Dat','ō'],['Acc','um'],['Abl','ō']].forEach(([c,e])=>add(st+e,v.lem,v.mean,{k:'nf',lab:'gerund',c,n:'sg',g:'n'},X));
+   const d=declineAdj({t:'12',parts:[st+'us',st+'a',st+'um']});['m','f','n'].forEach(g=>['sg','pl'].forEach(k=>CS.forEach((c,i)=>add(d[g][k][i],v.lem,v.mean,{k:'part',pt:'gerv',c,n:k,g},X))))}catch(e){}});
+  // semi-deponents: present system only
+  VOCAB.filter(w=>w.code==='vsd').forEach(w=>{try{const p=w.lem.split(', '),c=/āre$/.test(p[1])?1:/ēre$/.test(p[1])&&/eō$/.test(p[0])?2:/īre$/.test(p[1])?4:/iō$/.test(p[0])?'3io':3;const v=makeVerb([p[0],p[1]],c,false);
+   [['ind',['pres','impf','fut']],['sub',['pres','impf']]].forEach(([m,ts])=>ts.forEach(t=>{const f=conj(v,m,t,'A');if(f)f.forEach((x,i)=>add(x,w.lem,w.mean,{k:'v',p:i%3+1,n:i<3?'sg':'pl',t,vo:'A',m},{w,verb:v}))}))}catch(e){}});
+  // comparatives & superlatives
+  const IRCMP={'bonus':['melior','optim'],'malus':['peior','pessim'],'magnus':['maior','maxim'],'parvus':['minor','minim'],'multus':[null,'plūrim']};
+  ADJS.forEach(a=>{try{const w=VBY.get(a.lem),X={w,adj:a},p=a.parts;let st,sup;
+   if(a.t==='12'){st=p[1].slice(0,-1);sup=/er$/.test(p[0])?p[0]+'rim':st+'issim'}
+   else{st=p.length===3?p[1].slice(0,-2):p[1].endsWith('e')?p[0].slice(0,-2):p[1].slice(0,-2);sup=p.length===3?p[0]+'rim':/ilis$/.test(p[0])&&/^(facil|difficil|simil|dissimil|gracil|humil)/.test(p[0])?st+'lim':st+'issim'}
+   let cm=st+'ior';const ir=IRCMP[p[0]];if(ir){if(ir[0])cm=ir[0];else cm=null;sup=ir[1]}
+   if(cm){const b=cm.slice(0,-2),F={sg:[cm,b+'iōris',b+'iōrī',b+'iōrem',b+'iōre',cm],pl:[b+'iōrēs',b+'iōrum',b+'iōribus',b+'iōrēs',b+'iōribus',b+'iōrēs']},N={sg:[b+'ius',b+'iōris',b+'iōrī',b+'ius',b+'iōre',b+'ius'],pl:[b+'iōra',b+'iōrum',b+'iōribus',b+'iōra',b+'iōribus',b+'iōra']};
+    ['sg','pl'].forEach(k=>CS.forEach((c,i)=>{['m','f'].forEach(g=>add(F[k][i],a.lem,a.mean,{k:'adj',c,n:k,g,deg:'comp'},X));add(N[k][i],a.lem,a.mean,{k:'adj',c,n:k,g:'n',deg:'comp'},X)}))}
+   const d=declineAdj({t:'12',parts:[sup+'us',sup+'a',sup+'um']});['m','f','n'].forEach(g=>['sg','pl'].forEach(k=>CS.forEach((c,i)=>add(d[g][k][i],a.lem,a.mean,{k:'adj',c,n:k,g,deg:'sup'},X))))}catch(e){}});
+  Object.entries(PRON).forEach(([name,p])=>{const w=VOCAB.find(x=>x.lem.split(',')[0]===name.split(/[ ,]/)[0]);
+   Object.entries(p.rows).forEach(([c,row])=>row.forEach((cell,i)=>String(cell).split('/').forEach(x=>{x=x.replace(/\(.*?\)/g,'').trim();if(x&&!x.startsWith('=')&&x!=='—')add(x,w?w.lem:name,w?w.mean:'pronoun',{k:'pron',c,col:p.cols[i]},{w,pron:name})})))});
  }
  build();
  function look(word){const w=word.replace(/[^A-Za-zĀ-ſ]/g,'');if(!w)return null;let r=IDX.get(key(w));
-  if(!r){for(const enc of ['que','ne','ve']){if(key(w).endsWith(enc)&&key(w).length>enc.length+1){const base=IDX.get(key(w).slice(0,-enc.length));if(base)return {hits:base,enc};}}return null}
-  return {hits:r,enc:null};}
- function summarize(ds){const groups=new Map(),other=[];
-  ds.forEach(d=>{const m=d.match(/^(.*?)(?:— )?(?:(masculine|feminine|neuter) )?(nominative|genitive|dative|accusative|ablative|vocative) (singular|plural)$/);
-   if(m){const k=(m[1]||'')+'|'+(m[2]||'')+'|'+m[4];if(!groups.has(k))groups.set(k,[]);groups.get(k).push(m[3])}else other.push(d)});
-  const out=[];groups.forEach((cs,k)=>{const [pre,g,n]=k.split('|');if(cs.includes('vocative')&&cs.includes('nominative'))cs=cs.filter(c=>c!=='vocative');
-   out.push((pre?pre.trim()+' — ':'')+(g?g+' ':'')+cs.join(', ')+' '+n)});
-  return other.concat(out)}
+  if(!r){for(const enc of ['que','ne','ve']){if(key(w).endsWith(enc)&&key(w).length>enc.length+1){const base=IDX.get(key(w).slice(0,-enc.length));if(base)return {hits:base,enc,word:w.slice(0,-enc.length)};}}return null}
+  return {hits:r,enc:null,word:w};}
+ // exact-form analyses (respecting macrons when the word has them)
+ function exactAn(h,word){const lw=word.toLowerCase(),hasMac=/[āēīōū]/i.test(word);let ex=h.an.filter(a=>a.f===lw);if(!ex.length)ex=hasMac?[]:h.an.filter(a=>key(a.f)===key(lw));if(!ex.length&&!hasMac)ex=h.an;return ex}
+
+ // ---------- plain English ----------
+ const IRV={be:['was','been','being'],go:['went','gone','going'],see:['saw','seen','seeing'],give:['gave','given','giving'],take:['took','taken','taking'],write:['wrote','written','writing'],do:['did','done','doing'],know:['knew','known','knowing'],come:['came','come','coming'],run:['ran','run','running'],find:['found','found','finding'],hear:['heard','heard','hearing'],say:['said','said','saying'],lead:['led','led','leading'],send:['sent','sent','sending'],hold:['held','held','holding'],fight:['fought','fought','fighting'],teach:['taught','taught','teaching'],seek:['sought','sought','seeking'],think:['thought','thought','thinking'],make:['made','made','making'],have:['had','had','having'],put:['put','put','putting'],read:['read','read','reading'],throw:['threw','thrown','throwing'],fall:['fell','fallen','falling'],sing:['sang','sung','singing'],rise:['rose','risen','rising'],sit:['sat','sat','sitting'],stand:['stood','stood','standing'],leave:['left','left','leaving'],feel:['felt','felt','feeling'],sleep:['slept','slept','sleeping'],flee:['fled','fled','fleeing'],begin:['began','begun','beginning'],get:['got','got','getting'],tell:['told','told','telling'],speak:['spoke','spoken','speaking'],choose:['chose','chosen','choosing'],drive:['drove','driven','driving'],break:['broke','broken','breaking'],build:['built','built','building'],keep:['kept','kept','keeping'],lose:['lost','lost','losing'],bear:['bore','borne','bearing'],set:['set','set','setting'],cut:['cut','cut','cutting'],eat:['ate','eaten','eating'],drink:['drank','drunk','drinking'],grow:['grew','grown','growing'],win:['won','won','winning'],catch:['caught','caught','catching'],bring:['brought','brought','bringing'],buy:['bought','bought','buying'],die:['died','died','dying'],lie:['lay','lain','lying'],swim:['swam','swum','swimming'],strike:['struck','struck','striking'],seize:['seized','seized','seizing'],shine:['shone','shone','shining'],become:['became','become','becoming'],forget:['forgot','forgotten','forgetting'],dare:['dared','dared','daring']};
+ const KEEP_CVC={stop:1,plan:1,rub:1,hit:1,beg:1,drag:1,admit:1,prefer:1,omit:1};
+ function vparts(base){const w=base.split(' '),h=w[0],rest=w.slice(1).join(' ');let r=IRV[h];
+  if(!r){let ed,ing;if(/e$/.test(h)){ed=h+'d';ing=/ee$/.test(h)?h+'ing':h.slice(0,-1)+'ing'}else if(/[^aeiou]y$/.test(h)){ed=h.slice(0,-1)+'ied';ing=h+'ing'}else if(KEEP_CVC[h]){ed=h+h.slice(-1)+'ed';ing=h+h.slice(-1)+'ing'}else{ed=h+'ed';ing=h+'ing'}r=[ed,ed,ing]}
+  const s3=h==='be'?'is':h==='have'?'has':/(s|x|z|ch|sh|o)$/.test(h)?h+'es':/[^aeiou]y$/.test(h)?h.slice(0,-1)+'ies':h+'s';
+  const j=x=>rest?x+' '+rest:x;return {base:j(h),s3:j(s3),past:j(r[0]),pp:j(r[1]),ing:j(r[2])}}
+ function vbase(mean){let m=String(mean||'').split(/[;,]/)[0].replace(/\(.*?\)/g,'').replace(/^to /,'').trim();if(/^(be able)$/.test(m))return 'be able';return m||'do'}
+ const SUBJ={1:{sg:'I',pl:'we'},2:{sg:'you',pl:'you (all)'},3:{sg:'he / she / it',pl:'they'}};
+ function eng(a,h){
+  if(a.k==='v'){let b=vbase(h.mean);if(a.irr==='sum')b='be';if(a.irr==='possum')b='be able';const V=vparts(b),sj=SUBJ[a.p][a.n],third=a.p===3&&a.n==='sg',act=a.vo==='A'||a.dep;
+   const be={pres:a.p===1&&a.n==='sg'?'am':third?'is':'are',past:(a.p===1||third)&&a.n==='sg'?'was':'were'};
+   if(b==='be'){const T={pres:be.pres,impf:be.past,fut:'will be',perf:be.past,plup:'had been',futp:'will have been'};if(a.m==='sub')return sj+' '+({pres:'may be',impf:'would be / were',perf:'may have been',plup:'would have been / had been'}[a.t]||'');return sj+' '+T[a.t]}
+   if(b==='be able'){const T={pres:be.pres+' able, can',impf:be.past+' able, could',fut:'will be able',perf:'was able, could',plup:'had been able',futp:'will have been able'};if(a.m==='sub')return sj+' '+({pres:'may be able',impf:'could / would be able',perf:'may have been able',plup:'could have / had been able'}[a.t]||'');return sj+' '+T[a.t]}
+   if(a.m==='ind'){if(act)return sj+' '+({pres:third?V.s3:V.base,impf:be.past+' '+V.ing,fut:'will '+V.base,perf:V.past,plup:'had '+V.pp,futp:'will have '+V.pp}[a.t]);
+    return sj+' '+({pres:be.pres+' '+V.pp,impf:be.past+' being '+V.pp,fut:'will be '+V.pp,perf:be.past+' '+V.pp,plup:'had been '+V.pp,futp:'will have been '+V.pp}[a.t])}
+   if(act)return sj+' '+({pres:'may '+V.base,impf:'would / might '+V.base,perf:'may have '+V.pp,plup:'would have / had '+V.pp}[a.t]);
+   return sj+' '+({pres:'may be '+V.pp,impf:'would / might be '+V.pp,perf:'may have been '+V.pp,plup:'would have been / had been '+V.pp}[a.t])}
+  if(a.k==='imp'){const V=vparts(vbase(h.mean));return V.base+'!'+(a.n==='pl'?' (to several people)':' (to one person)')}
+  if(a.k==='part'){const V=vparts(vbase(h.mean));if(a.pt==='pres')return V.ing;if(a.pt==='gerv')return 'to be '+V.pp+', needing to be '+V.pp;if(a.pt==='fut')return 'about to '+V.base;return a.dep?'having '+V.pp:'having been '+V.pp+', '+V.pp}
+  if(a.k==='nf'){const V=vparts(vbase(h.mean)),l=a.lab;
+   if(/gerundive/.test(l))return 'to be '+V.pp+', needing to be '+V.pp;if(/gerund/.test(l))return a.c==='Acc'?'(ad + ) for '+V.ing:a.c==='Dat'||a.c==='Abl'?'by '+V.ing+', for '+V.ing:'of '+V.ing;
+   if(/future/.test(l))return 'to be about to '+V.base;if(/perfect passive/.test(l)||(/perfect/.test(l)&&a.dep))return a.dep?'to have '+V.pp:'to have been '+V.pp;if(/perfect/.test(l))return 'to have '+V.pp;
+   if(/passive/.test(l))return 'to be '+V.pp;return 'to '+V.base}
+  return null}
+ const PLI={man:'men',woman:'women',child:'children',foot:'feet',person:'people',tooth:'teeth',mouse:'mice',ox:'oxen',wife:'wives',life:'lives',knife:'knives',leaf:'leaves',wolf:'wolves',half:'halves',thief:'thieves',sheep:'sheep',fish:'fish',deer:'deer',people:'peoples',goddess:'goddesses',army:'armies',city:'cities',enemy:'enemies'};
+ function plur(w){const p=w.split(' '),l=p.pop();let r=PLI[l]||(/[^aeiou]y$/.test(l)?l.slice(0,-1)+'ies':/(s|x|z|ch|sh)$/.test(l)?l+'es':l+'s');return p.concat(r).join(' ')}
+ function nbase(mean){return String(mean||'').split(/[;,]/)[0].replace(/\(.*?\)/g,'').replace(/^(a|an|the) /,'').trim()}
+ function caseEng(c,num,word,proper){const the=proper?'':'the ';const W=num==='pl'&&!proper?plur(word):word;
+  return {Nom:the+W+' (subject: doing the action)',Gen:'of '+the+W,Dat:'to / for '+the+W,Acc:the+W+' (object: receiving the action)',Abl:'by / with / from '+the+W,Voc:'O '+W+'!'}[c]}
+ function degEng(W,d){const w=W.split(/[,;]/)[0].trim(),IR={good:['better','best'],bad:['worse','worst'],big:['bigger','biggest'],great:['greater','greatest'],small:['smaller','smallest'],much:['more','most'],many:['more','most']};if(IR[w])return IR[w][d==='comp'?0:1];
+  if(w.split(' ').length>1||w.length>7)return (d==='comp'?'more ':'most / very ')+w;const b=/e$/.test(w)?w.slice(0,-1):/[^aeiou]y$/.test(w)?w.slice(0,-1)+'i':/^[^aeiou]*[aeiou][bdgmnpt]$/.test(w)?w+w.slice(-1):w;return d==='comp'?b+'er':b+'est, very '+w}
+ function adjEng(a,W){const who=(a.n==='sg'?'one ':'several ')+({m:'masculine',f:'feminine',n:'neuter'}[a.g]||'')+(a.n==='sg'?' thing':' things');const x=W+' …';
+  return ({Nom:'the '+x+' (subject)',Gen:'of the '+x,Dat:'to / for the '+x,Acc:'the '+x+' (object)',Abl:'by / with / from the '+x,Voc:'O '+x+'!'}[a.c])+'  — describing '+who}
+ const PRW={'ego / tū':{ego:['I','me','of me','to / for me','by / with / from me'],'tū':['you','you','of you','to / for you','by / with / from you'],'nōs':['we','us','of us','to / for us','by / with / from us'],'vōs':['you (all)','you (all)','of you (all)','to / for you (all)','by / with / from you (all)']},
+  'suī (reflexive)':{'*':['—','himself / herself / themselves','of himself / herself','to / for himself / herself','by / with / from himself / herself']}};
+ const PRB={'hic, haec, hoc':'this','ille, illa, illud':'that','ipse, ipsa, ipsum':'… himself / herself / itself','īdem, eadem, idem':'the same','quī, quae, quod':'who / which','quis, quid (interrogative)':'who? / what?','ūnus, duo, trēs':'one / two / three'};
+ function pronEng(a,h){const nm=h.pron,ci={Nom:0,Acc:1,Gen:2,Dat:3,Abl:4}[a.c];if(ci==null)return null;
+  if(PRW[nm]){const t=PRW[nm][a.col]||PRW[nm]['*'];return t&&t[ci]}
+  if(nm==='is, ea, id'){const pl=/pl/.test(a.col),g=(a.col||'')[0];const sub=pl?'they':g==='f'?'she':g==='n'?'it':'he',obj=pl?'them':g==='f'?'her':g==='n'?'it':'him',pos=pl?'their':g==='f'?'her':g==='n'?'its':'his';
+   return [sub+' (subject) / this, that',obj+' (object)',pos+' (of '+obj+')','to / for '+obj,'by / with / from '+obj][ci]}
+  const b=PRB[nm]||nbase(h.mean);return [b+' (subject)',b+' (object)','of '+b,'to / for '+b,'by / with / from '+b][ci]+(a.col?'  — '+a.col:'')}
+ const CL={Nom:'subject',Gen:'"of"',Dat:'"to / for"',Acc:'object',Abl:'"by / with / from"',Voc:'calling'};
+ const CN={Nom:'nominative',Gen:'genitive',Dat:'dative',Acc:'accusative',Abl:'ablative',Voc:'vocative'};
+ const GN={m:'masculine',f:'feminine',n:'neuter',mf:'masculine / feminine'};
+ const TN={pres:'present',impf:'imperfect',fut:'future',perf:'perfect',plup:'pluperfect',futp:'future perfect'};
+ function family(h){const w=h.w,c=w&&w.code||'';
+  if(h.noun||/^n[1-5]/.test(c)){const d=(h.noun&&h.noun.d)||+c[1];const g=h.noun?h.noun.g:(w&&(w.lem.match(/, (m|f|n)\b/)||[])[1]);return 'noun · '+['','1st','2nd','3rd','4th','5th'][d]+' declension'+(g?' · '+GN[g]:'')}
+  if(h.verb){return (h.verb.dep?'deponent verb':'verb')+' · '+({1:'1st',2:'2nd',3:'3rd','3io':'3rd (-iō)',4:'4th'}[h.verb.c])+' conjugation'}
+  if(h.irr)return 'irregular verb';if(h.adj)return 'adjective · '+(h.adj.t==='12'?'1st/2nd declension (-us, -a, -um)':'3rd declension');if(h.pron)return 'pronoun';
+  return ({adv:'adverb',prep:'preposition',conj:'conjunction',num:'number',pron:'pronoun'})[c]||(c?POS(c):'')||''}
+ function dict(h){const w=h.w;if(w)return w.lem;return h.lemma}
+ function tableFor(h){try{if(h.noun)return nounTable(h.noun);if(h.adj)return adjTable(h.adj);if(h.verb){const v=h.verb;return verbTable(v,'ind',v.dep?'P':'A',TENSES.ind)+verbTable(v,'sub',v.dep?'P':'A',TENSES.sub)+(v.dep?'':verbTable(v,'ind','P',TENSES.ind))+nfList(v)}if(h.irr)return irrTable(h.irr);if(h.pron)return pronTable(h.pron)}catch(e){}return ''}
+ window.LEX={look,exactAn,eng,family,CN,CL};
  function meanLine(m){return String(m||'').split(';')[0]}
 
  // ---------- wrap words so they can be tapped ----------
@@ -143,7 +228,7 @@
     while((m=GRX.exec(s))){const kk=m[1].toLowerCase().replace(/\s+/g,' ');if(inStory&&seen.has(kk))continue;if(inStory)seen.add(kk);fr.appendChild(document.createTextNode(s.slice(last,m.index)));const sp=document.createElement('span');sp.className='gt';sp.dataset.k=m[1].toLowerCase().replace(/\s+/g,' ');sp.textContent=m[1];fr.appendChild(sp);last=m.index+m[1].length}
     fr.appendChild(document.createTextNode(s.slice(last)));t.parentNode.replaceChild(fr,t)})})}
  const main=document.getElementById('main');let pend=0;
- function scan(){pend=0;try{wrapLatin(main);wrapTerms(main)}catch(e){}}
+ function scan(){pend=0;try{wrapLatin(main);if(window.tagAll)window.tagAll(main);wrapTerms(main)}catch(e){}}
  new MutationObserver(()=>{if(!pend)pend=requestAnimationFrame(scan)}).observe(main,{childList:true,subtree:true});
  scan();
 
@@ -151,15 +236,35 @@
  const gb=document.createElement('div');gb.id='gb';gb.setAttribute('role','dialog');gb.hidden=true;document.body.appendChild(gb);
  let cur=null,hideT=0;
  function html(el){
-  if(el.classList.contains('gt')){const k=el.dataset.k;return '<div class="gbk">Grammar</div><div class="gbh">'+esc(k.charAt(0).toUpperCase()+k.slice(1))+'</div><div class="gbx">'+esc(G[k]||'')+'</div>';}
-  const r=look(el.textContent);if(!r)return null;
-  const hits=r.hits.slice(0,3);
-  return hits.map(h=>{const tw=el.textContent.replace(/[^A-Za-zĀ-ſ]/g,'').toLowerCase(),ex=(h.dd||[]).filter(x=>x.f===tw).map(x=>x.d),ds=summarize(ex.length?[...new Set(ex)]:h.descs);const lemma=h.lemma.split(',')[0];const isLemma=key(lemma)===key(el.textContent.replace(/[^A-Za-zĀ-ſ]/g,''))&&!ds.length;
-   return '<div class="gbi"><div class="gbh la">'+esc(el.textContent.replace(/[,.;:!?]/g,''))+(r.enc?'':'')+'</div><div class="gbm">'+esc(meanLine(h.mean))+'</div>'+
-    (ds.length?'<div class="gbx">'+ds.slice(0,5).map(esc).join('<br>')+(ds.length>5?'<br>…':'')+'</div>':'')+
-    (isLemma&&!ds.length?'':'<div class="gbl">from <span class="la">'+esc(h.lemma)+'</span></div>')+'</div>'}).join('')+
-   (r.enc?'<div class="gbx">+ <b>-'+r.enc+'</b> = '+({que:'"and"',ne:'question marker',ve:'"or"'}[r.enc])+'</div>':'')+
-   (r.hits.length>3?'<div class="gbx">Also: '+r.hits.slice(3).map(h=>esc(h.lemma.split(',')[0])).join(', ')+'</div>':'');}
+  if(el.classList.contains('gt')){const k=el.dataset.k;return '<div class="gbk">Grammar</div><div class="gbh">'+esc(k.charAt(0).toUpperCase()+k.slice(1))+'</div><div class="gbx gbt">'+esc(G[k]||'')+'</div>';}
+  const r=look(el.textContent);if(!r)return null;TAB=[];
+  const hits=r.hits.slice(0,2);const RC={subj:'Nom',pred:'Nom',obj:'Acc',accs:'Acc',gen:'Gen',dat:'Dat',abl:'Abl',abs:'Abl',voc:'Voc'}[(el.dataset.role||'').split('|')[0]];
+  const out=hits.map((h,hi)=>{const ex=exactAn(h,r.word);
+   const lines=[],tech=[];const seenL=new Set();
+   ex.forEach(a=>{let e=null,t='';
+    if(a.k==='n'){const W=nbase(h.mean);e=caseEng(a.c,a.n,W,/^[A-ZĀ-Ū]/.test(h.lemma));t=CN[a.c]+' '+(a.n==='sg'?'singular':'plural')}
+    else if(a.k==='adj'){let W=nbase(h.mean);if(a.deg)W=degEng(W,a.deg);e=adjEng(a,W);t=(a.deg==='comp'?'comparative · ':a.deg==='sup'?'superlative · ':'')+GN[a.g]+' '+CN[a.c]+' '+(a.n==='sg'?'singular':'plural')}
+    else if(a.k==='pron'){e=pronEng(a,h)||CL[a.c]+' form';t=CN[a.c]+(a.col?' · '+a.col:'')}
+    else{e=eng(a,h);t=a.k==='v'?(a.p+(a.p===1?'st':a.p===2?'nd':'rd')+' person '+(a.n==='sg'?'singular':'plural')+' · '+TN[a.t]+(a.dep||a.irr?'':a.vo==='A'?' active':' passive')+(a.m==='ind'?'':' subjunctive')):a.k==='part'?({pres:'present participle',perf:a.dep?'perfect participle':'perfect passive participle',fut:'future participle',gerv:'gerundive'}[a.pt])+(a.c&&a.pt!=='pres'?' · '+GN[a.g]+' '+CN[a.c]+' '+(a.n==='sg'?'sg.':'pl.'):''):a.k==='imp'?'imperative':a.lab+(a.c?' · '+CN[a.c]:'')}
+    if(a.k==='n'&&a.c==='Voc'&&ex.some(b=>b.k==='n'&&b.c==='Nom'&&b.n===a.n))return;
+    if(e&&!seenL.has(e)){seenL.add(e);lines.push([e,t,RC&&a.c===RC])}});
+   const nOn=lines.filter(x=>x[2]).length;if(nOn&&nOn<lines.length)lines.sort((a,b)=>b[2]-a[2]);else lines.forEach(x=>x[2]=false);const anyOn=lines.some(x=>x[2]);
+   const fam=family(h),tb=tableFor(h);if(tb)TAB[hi]={h,tb};
+   return '<div class="gbi"><div class="gbtop"><span class="gbh la">'+esc(r.word)+'</span>'+(fam?'<span class="gbpos">'+esc(fam)+'</span>':'')+'</div>'+
+    '<div class="gbm">'+esc(meanLine(h.mean))+'</div>'+
+    (lines.length?'<div class="gbk2">'+(lines.length>1?'Here it can mean':'Here it means')+'</div><ul class="gbl2">'+lines.slice(0,5).map(x=>'<li'+(x[2]?' class="on"':'')+'><span>'+esc(x[0])+'</span>'+(x[1]?'<small>'+esc(x[1])+'</small>':'')+'</li>').join('')+'</ul>':'')+
+    (lines.length>1?'<div class="gbhint">'+(anyOn?'Highlighted: the meaning it has in this sentence.':'Which one? The rest of the sentence decides.')+'</div>':'')+
+    '<div class="gbd"><span>Dictionary:</span> <span class="la">'+esc(dict(h))+'</span></div>'+
+    '<div class="gbb">'+(tb?'<button class="gbbtn" data-tab="'+hi+'">Full table</button>':'')+(h.w&&typeof S!=='undefined'?'<button class="gbbtn ghost" data-srs="'+h.w.id+'">'+(S.srs[h.w.id]?'In your words ✓':'Add to my words')+'</button>':'')+'</div></div>'}).join('');
+  const ri=window.roleInfo&&window.roleInfo(el.dataset.role);
+  return (ri?'<div class="gbrole r-'+el.dataset.role.split('|')[0]+'"><b>In this sentence: '+esc(ri.name)+'</b><span>'+esc(ri.why)+'</span></div>':'')+out+(r.enc?'<div class="gbx">+ <b>-'+r.enc+'</b> on the end = '+({que:'"and" (joins this word to the one before)',ne:'turns the sentence into a yes/no question',ve:'"or"'}[r.enc])+'</div>':'')+
+   (r.hits.length>2?'<div class="gbx">Also could be: '+r.hits.slice(2).map(h=>esc(h.lemma.split(',')[0])+' ('+esc(meanLine(h.mean))+')').join(', ')+'</div>':'');}
+ let TAB=[];
+ function tableSheet(i){const t=TAB[i];if(!t)return;hide();const sh=document.createElement('div');sh.className='tsh';sh.innerHTML='<div class="tsc"></div><div class="tsp"><div class="tsg"></div><div class="tshd"><div><div class="gbk">Full table</div><div class="gbh la">'+esc(dict(t.h))+'</div><div class="gbm">'+esc(meanLine(t.h.mean))+'</div></div><button class="ic tsx" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div><div class="tsb">'+t.tb.replace(/<table/g,'<div class=scroll><table').replace(/<\/table>/g,'</table></div>')+'</div></div>';
+  document.body.appendChild(sh);requestAnimationFrame(()=>sh.classList.add('in'));const close=()=>{sh.classList.remove('in');sh.classList.add('out');setTimeout(()=>sh.remove(),230)};
+  sh.querySelector('.tsc').onclick=close;sh.querySelector('.tsx').onclick=close;window.addEventListener('hashchange',close,{once:true})}
+ document.addEventListener('click',e=>{const b=e.target.closest('#gb [data-tab]');if(b){tableSheet(+b.dataset.tab);return}
+  const s2=e.target.closest('#gb [data-srs]');if(s2&&typeof S!=='undefined'){const id=+s2.dataset.srs;if(!S.srs[id]){S.srs[id]={b:0,due:today()};save()}s2.textContent='In your words ✓'}},true);
  function show(el){const h=html(el);if(!h)return;clearTimeout(hideT);if(cur)cur.classList.remove('gon');cur=el;el.classList.add('gon');
   gb.innerHTML=h;gb.hidden=false;gb.classList.remove('out');gb.style.visibility='hidden';gb.style.left='0px';gb.style.top='0px';
   const r=el.getBoundingClientRect(),w=Math.min(320,innerWidth-24);gb.style.width=w+'px';const bh=gb.offsetHeight;

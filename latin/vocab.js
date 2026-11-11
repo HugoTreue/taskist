@@ -449,7 +449,49 @@ octō|eight|num
 novem|nine|num
 decem|ten|num
 centum|hundred|num
-mīlle (pl. mīlia)|thousand|num`;
+mīlle (pl. mīlia)|thousand|num
+canis, canis, m|dog|n3
+mordeō, mordēre, momordī, morsum|bite|v2
+cantō, cantāre, cantāvī, cantātum|sing|v1
+rosa, rosae, f|rose|n1
+Rōma, Rōmae, f|Rome (Rōmae = at Rome)|n1
+Mārcus, Mārcī, m|Marcus (a man's name)|n2
+Gallia, Galliae, f|Gaul (roughly modern France)|n1
+Carthāgō, Carthāginis, f|Carthage|n3
+Trōia, Trōiae, f|Troy|n1
+mel, mellis, n|honey|n3
+pugna, pugnae, f|fight, battle|n1
+lēgātus, lēgātī, m|envoy, ambassador|n2
+ōra, ōrae, f|shore, coast|n1
+stultus, stulta, stultum|foolish|a12
+dīves, dīvitis|rich|a3
+hūmānus, hūmāna, hūmānum|human|a12
+pūblicus, pūblica, pūblicum|public (rēs pūblica = the state)|a12
+adversus, adversa, adversum|opposite, hostile|a12
+salūtō, salūtāre, salūtāvī, salūtātum|greet|v1
+emō, emere, ēmī, ēmptum|buy|v3
+errō, errāre, errāvī, errātum|wander; make a mistake|v1
+ōrō, ōrāre, ōrāvī, ōrātum|beg, pray|v1
+putō, putāre, putāvī, putātum|think|v1
+nesciō, nescīre, nescīvī, nescītum|not know|v4
+dubitō, dubitāre, dubitāvī, dubitātum|doubt, hesitate|v1
+aestimō, aestimāre, aestimāvī, aestimātum|value, judge|v1
+discō, discere, didicī|learn|v3
+fleō, flēre, flēvī, flētum|weep|v2
+impediō, impedīre, impedīvī, impedītum|hinder, block|v4
+committō, committere, commīsī, commissum|commit; begin (a battle)|v3
+excēdō, excēdere, excessī, excessum|go out, leave|v3
+vulnerō, vulnerāre, vulnerāvī, vulnerātum|wound|v1
+mentior, mentīrī, mentītus sum|lie, tell a lie|d4
+coepī, coepisse|began (perfect only)|vx
+pluit, pluere, pluit|it rains|vx
+pudet, pudēre, puduit|it shames (mē pudet = I am ashamed)|vx
+miseret, miserēre|it moves to pity (mē miseret = I pity)|vx
+hūc|to here, hither|adv
+satis|enough|adv
+quīn|that … not; but that (after doubting)|conj
+quōminus|so that … not (after hindering)|conj
+orior, orīrī, ortus sum|rise|d4`;
 const VOCAB=VOCAB_RAW.split('\n').map((l,ix)=>{const [lem,mean,code]=l.split('|');return {id:ix,lem,mean,code};});
 const POS=c=>c[0]=='n'&&c!='num'?'noun':c[0]=='v'||c[0]=='d'?'verb':c[0]=='a'?'adjective':{pron:'pronoun',adv:'adverb',prep:'preposition',conj:'conjunction',num:'numeral'}[c];
 function nounOf(w){if(!/^n[1-5]/.test(w.code)||w.code.endsWith('x'))return null;const p=w.lem.split(', ');
