@@ -278,6 +278,76 @@ h1{font-size:38px}h2{font-size:34px}
 .try .tfb{animation:fdi .25s}.try .tfb:empty{display:none}.try .tfb p{margin:10px 2px 0}.try .tfb .why{color:var(--ink);font-size:15px;line-height:1.5;font-style:normal}
 .try .tfb .btn{margin-top:10px}
 .empty{text-align:center;padding:24px 16px}.empty .laurel{width:96px;height:50px;color:var(--acc);margin:0 auto}
+/* ---- desktop: sidebar, wide layouts, contents panel ---- */
+.nbrand,.nfoot,.toc{display:none}
+@media (hover:hover) and (pointer:fine){
+ a.card,.ucell,.cont{transition:transform .2s cubic-bezier(.2,.8,.3,1),box-shadow .2s}
+ a.card:hover,.ucell:hover{transform:translateY(-2px);box-shadow:0 6px 22px rgba(60,40,20,.10)}
+ .opt:not(:disabled):hover{background:color-mix(in srgb,var(--acc) 9%,var(--card2))}
+ .node a:hover,.li:hover,.todo:hover{background:var(--prs)}
+ .btn:hover{filter:brightness(1.07)}
+ .seg button:not(.on):hover{background:var(--card2)}
+ nav a:hover:before{opacity:.6}
+ .gw:hover,.gt:hover{background:color-mix(in srgb,var(--acc) 10%,transparent)}
+}
+@media (min-width:1000px){
+ :root{--sb:248px}
+ nav{top:0;bottom:0;right:auto;left:0;width:var(--sb);max-width:none;margin:0;border-radius:0;flex-direction:column;justify-content:flex-start;gap:2px;padding:18px 14px 18px;box-shadow:1px 0 0 var(--line);background:var(--bg)}
+ nav>a:not(.nbrand){flex:none;flex-direction:row;gap:14px;font-size:15px;padding:11px 14px;text-align:left;justify-content:flex-start;align-items:center}
+ nav>a:before{top:0;bottom:0;left:0;right:0;border-radius:14px}
+ nav>a.on:before{opacity:1;background:color-mix(in srgb,var(--acc) 10%,transparent)}
+ nav>a.on{font-weight:600}
+ .nbrand,.nprog{flex:none!important}.nbrand:before,.nprog:before{display:none!important}
+ .nbrand{display:flex;flex-direction:column;align-items:center;gap:0;text-decoration:none;color:var(--ink);padding:4px 0 18px;margin-bottom:8px;border-bottom:1px solid var(--line)}
+ .nbrand .laurel{width:84px;height:44px;color:var(--acc)}
+ .nbrand span{font:600 22px 'EB Garamond',serif;margin-top:2px}
+ .nfoot{display:block;margin-top:auto}
+ .nprog{display:flex;flex-direction:row!important;text-align:left!important;font-size:inherit!important;align-items:center!important;gap:12px;text-decoration:none;color:var(--ink);background:var(--card);border-radius:16px;padding:12px;box-shadow:var(--sh)}
+ .nprog span{display:flex;flex-direction:column;min-width:0}.nprog b{font-size:14px}.nprog small{font-size:12px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .nprog .ring text{font-size:15px}
+ nav .nprog svg.ring{width:46px;height:46px;stroke-width:initial}nav .nbrand svg{stroke-width:initial}
+ .bar0{left:var(--sb);padding-left:24px!important;padding-right:20px}
+ .bar0 .tt{font-family:'EB Garamond',serif;font-size:21px}
+ #main{--w:1080px;max-width:none;margin:0 0 0 var(--sb);padding:84px max(40px,calc((100vw - var(--sb) - var(--w))/2)) 64px}
+ #main[data-v=words],#main[data-v=drill],#main[data-v=write],#main[data-v=review],#main[data-v=read]{--w:820px}
+ #main[data-v=ref]{--w:1000px}
+ .rprog{left:var(--sb)}
+ .tsp{left:var(--sb)}.tsp{max-width:820px;margin:0 auto}
+ h2{font-size:42px;margin-bottom:12px}h1{font-size:48px}
+ .sub{font-size:15px}
+ /* home: two columns */
+ .hero2{padding:8px 0 22px}.hero2 .laurel{width:140px;height:74px}.hero2 p{max-width:none;font-size:16px}
+ .hgrid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:22px;align-items:start}
+ .hgrid .hc1>.card:first-child,.hgrid .hc2>.card:first-child{margin-top:0}
+ .cont{padding:22px}.cont b{font-size:26px}
+ .ugrid{grid-template-columns:repeat(2,1fr)}
+ /* course map: units side by side */
+ .lhd{margin-bottom:10px}
+ .umaps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 24px;align-items:start}
+ .umap{margin:14px 0}
+ /* reader: text with the word panel beside it */
+ .rd{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:20px;align-items:start}
+ .rd .card{margin:12px 0}
+ .rd .gloss{position:sticky;top:84px;bottom:auto;box-shadow:var(--sh)}
+ .text{font-size:24px}
+ /* lesson: reading column + contents panel */
+ #main[data-v=lesson]{--w:1100px;display:grid;grid-template-columns:minmax(0,1fr) 260px;column-gap:56px;align-content:start}
+ #main[data-v=lesson]>*{grid-column:1;min-width:0}
+ #main[data-v=lesson]>.toc{grid-column:2;grid-row:1 / span 60;align-self:start;position:sticky;top:84px;display:block;animation:rise .4s .1s both}
+ .story p{font-size:17.5px;line-height:1.7}.story li{font-size:17px}
+ .toc .tk{font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin:4px 0 8px}
+ .toc ol{list-style:none;margin:0 0 18px;padding:0;border-left:2px solid var(--line)}
+ .toc ol a{display:block;padding:6px 12px;margin-left:-2px;border-left:2px solid transparent;color:var(--mute);text-decoration:none;font-size:14px;line-height:1.35;transition:color .2s,border-color .2s,background .2s;border-radius:0 8px 8px 0}
+ .toc ol a:hover{color:var(--ink);background:var(--prs)}
+ .toc ol a.on{color:var(--acc);border-left-color:var(--acc);font-weight:600}
+ .toc .tcard{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:16px;padding:12px;box-shadow:var(--sh)}
+ .toc .tcard div{display:flex;flex-direction:column}.toc .tcard b{font-size:14px}.toc .tcard small{font-size:12.5px;color:var(--mute)}
+ .toc .tdone{margin:10px 2px 0;color:var(--ok);font-size:13.5px;font-weight:500}
+ .toc .tnext{display:flex;flex-direction:column;margin-top:12px;padding:12px 14px;border-radius:16px;background:var(--card2);text-decoration:none;color:var(--ink);transition:transform .2s}
+ .toc .tnext:hover{transform:translateY(-2px)}.toc .tnext small{font-size:11.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--acc)}.toc .tnext b{font-size:14.5px;margin-top:2px}
+ #gb{max-width:400px}
+}
+@media (min-width:1400px){#main[data-v=lesson]{grid-template-columns:minmax(0,1fr) 280px;column-gap:72px}}
 @media (prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 </style>
 </head>
@@ -315,5 +385,6 @@ h1{font-size:38px}h2{font-size:34px}
 <script src="motion.js"></script>
 <script src="gloss.js"></script>
 <script src="colour.js"></script>
+<script src="desktop.js"></script>
 </body>
 </html>

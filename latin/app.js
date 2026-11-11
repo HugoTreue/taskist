@@ -64,19 +64,19 @@ function home(){
   const acc=S.stats.t?Math.round(100*S.stats.r/S.stats.t):0,L=LESSONS[cl-1],mc=missCount(),allDone=done>=LESSONS.length;
   const hr=new Date().getHours(),greet=hr<12?'Salvē! Good morning':hr<18?'Salvē! Good afternoon':'Salvē! Good evening';
   setMain(`<section class=hero2>${LAUREL}<div class=hg>${greet}</div><h1>Lingua Latina</h1><p>Read and write Classical Latin, one small step a day.</p></section>
-  <a class="card cont" href="#lesson-${cl}">${ring(done/LESSONS.length,64,`${done}<tspan class=rs>/50</tspan>`)}<div class=ctx><span class=xk>${allDone?'Course complete · revisit':done?'Continue':'Start here'} · Unit ${L.u+1}</span><b>${cl}. ${esc(L.t)}</b><small>${UNITS[L.u]}${tryCount(cl)?` · ${tryCount(cl)} Try-its`:''}</small></div><span class=go aria-hidden=true><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>
+  <div class=hgrid><div class=hc1><a class="card cont" href="#lesson-${cl}">${ring(done/LESSONS.length,64,`${done}<tspan class=rs>/50</tspan>`)}<div class=ctx><span class=xk>${allDone?'Course complete · revisit':done?'Continue':'Start here'} · Unit ${L.u+1}</span><b>${cl}. ${esc(L.t)}</b><small>${UNITS[L.u]}${tryCount(cl)?` · ${tryCount(cl)} Try-its`:''}</small></div><span class=go aria-hidden=true><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>
   ${mc?`<a class="card rev" href="#review"><span class=rvn>${mc}</span><div><b>Review weak spots</b><small>Questions you missed. Get them right to clear them.</small></div></a>`:''}
   <div class=card><h3>Today</h3>
    <a class=todo href="#words"><b>Words</b><span>${dueCount()} due · ${Math.max(0,10-(S.newDay.d==today()?S.newDay.n:0))} new available</span></a>
    <a class=todo href="#drill"><b>Drill</b><span>Practise forms until they're automatic</span></a>
    <a class=todo href="#read"><b>Read</b><span>Tap any word for help</span></a>
    <a class=todo href="#write"><b>Write</b><span>English → Latin sentences</span></a></div>
-  <div class=stats><div><b>${done}<small>/50</small></b><span>lessons</span></div><div><b>${learnedCount()}</b><span>words known</span></div><div><b>${acc}%</b><span>accuracy</span></div></div>
+  <div class=stats><div><b>${done}<small>/50</small></b><span>lessons</span></div><div><b>${learnedCount()}</b><span>words known</span></div><div><b>${acc}%</b><span>accuracy</span></div></div></div><div class=hc2>
   <div class=card><h3>Units</h3><div class=ugrid>${UNITS.map((u,ui)=>{const ls=LESSONS.map((l,i)=>[l,i+1]).filter(x=>x[0].u==ui),d=ls.filter(x=>S.done[x[1]]).length;return `<a class="ucell ${d==ls.length?'full':ls.some(x=>x[1]==cl)?'now':''}" href="#learn-${ui}"><span class=un>${ui+1}</span><span class=ubar><i style="width:${100*d/ls.length}%"></i></span><small>${esc(u)}</small></a>`}).join('')}</div></div>
   <div class=card><h3>Daily routine (≈ 50 min)</h3>${DAILY.map(d=>`<div class=row><b>${d[0]}</b><span>${d[1]}</span></div>`).join('')}</div>
   <div class=card><h3>The 2-year plan</h3>${PLAN.map((p,i)=>`<details ${i==phase?'open':''} class="phase ${i==phase?'now':''}"><summary><b>${p.m}</b> <span>Lessons ${p.l[0]}${p.l[1]!=p.l[0]?'–'+p.l[1]:''} · ${p.words} words</span></summary><p><b>Goal:</b> ${p.goal}</p><p><b>Read:</b> ${p.read}</p></details>`).join('')}
   <p class=note>Companion book (optional but recommended): <i>Lingua Latina per se Illustrata</i>, Part I <i>Familia Romana</i> and Part II <i>Roma Aeterna</i>, by Hans Ørberg.</p></div>
-  <div class=card><h3>Your data</h3><p class=note>Progress is saved in this browser only.</p><button class="btn ghost" id=reset>Reset all progress</button></div>`);
+  <div class=card><h3>Your data</h3><p class=note>Progress is saved in this browser only.</p><button class="btn ghost" id=reset>Reset all progress</button></div></div></div>`);
   $('#reset').onclick=e=>{if(e.target.dataset.c){S={done:{},srs:{},streak:{d:0,n:0},stats:{r:0,t:0},newDay:{d:0,n:0},wDone:{},miss:{},tried:{}};save();hdr();home();}else{e.target.dataset.c=1;e.target.textContent='Tap again to confirm';}};
   ringIn();
 }
@@ -85,13 +85,13 @@ function ringIn(){requestAnimationFrame(()=>requestAnimationFrame(()=>document.q
 // ---------- learn ----------
 function learn(focus){
   const cl=curLesson(),done=Object.keys(S.done).length;
-  let h=`<h2>Course</h2><div class=lhd>${ring(done/LESSONS.length,52,Math.round(100*done/LESSONS.length)+'%')}<p class=sub>50 lessons, 7 units. Each one tells the story of one idea, with Try-its as you go, a quiz and a drill.</p></div>`;
+  let h=`<h2>Course</h2><div class=lhd>${ring(done/LESSONS.length,52,Math.round(100*done/LESSONS.length)+'%')}<p class=sub>50 lessons, 7 units. Each one tells the story of one idea, with Try-its as you go, a quiz and a drill.</p></div><div class=umaps>`;
   UNITS.forEach((u,ui)=>{const ls=LESSONS.map((l,i)=>[l,i+1]).filter(x=>x[0].u==ui),d=ls.filter(x=>S.done[x[1]]).length;
     h+=`<section class="umap ${d==ls.length?'full':''}" id=unit-${ui}><div class=uhd><span class=ub>Unit ${ui+1}</span><b>${esc(u)}</b><span class=uc>${d}/${ls.length}</span></div><ol class=path>`;
     ls.forEach(([l,n],k)=>{const st=S.done[n]?'done':n==cl?'cur':'fut',t=S.tried[n]||0,tc=tryCount(n);
       h+=`<li class="node ${st}${k<ls.length-1&&S.done[n]&&S.done[ls[k+1][1]]?' lk':''}"><a href="#lesson-${n}"><span class=dot>${st=='done'?'<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>':n}</span><span class=nt>${esc(l.t)}<small>${st=='cur'?'Up next':st=='done'?'Completed':'Lesson '+n}${tc&&(t||st!=="fut")?` · Try-its ${Math.min(t,tc)}/${tc}`:''}</small></span></a></li>`;});
     h+='</ol></section>';});
-  setMain(h);ringIn();
+  setMain(h+'</div>');ringIn();
   const tgt=typeof focus==='number'?document.getElementById('unit-'+focus):document.querySelector('.node.cur');
   if(tgt&&(typeof focus==='number'||done))setTimeout(()=>{const y=tgt.getBoundingClientRect().top+scrollY-(typeof focus==='number'?70:200);scrollTo({top:Math.max(0,y),behavior:'smooth'})},260);
 }
@@ -259,7 +259,7 @@ function wordList(){
 function read(){setMain(`<h2>Reader</h2><p class=sub>Graded and real Latin. Tap any word to see its meaning and grammar.</p><div class=list>${READER.map((r,i)=>`<a class=li href="#read-${i}"><span class=num>${i+1}</span><span><b class=la>${r.t}</b><br><small>${r.lvl}</small></span><span></span></a>`).join('')}</div>`);}
 function readText(i){const r=READER[i];if(!r)return read();
   const toks=r.w.split('~').map(x=>x.split('|'));
-  setMain(`<div class=crumb><a href="#read">Reader</a></div><h2 class=la>${r.t}</h2><p class=sub>${r.lvl} · ${r.src}</p><div class="card text la">${toks.map((t,j)=>t[0]=='/'?'<br>':`<span class=w data-j=${j}>${esc(t[0])}</span>`).join(' ')}</div><div id=gl class="card gloss"><p class=note>Tap a word.</p></div>
+  setMain(`<div class=crumb><a href="#read">Reader</a></div><h2 class=la>${r.t}</h2><p class=sub>${r.lvl} · ${r.src}</p><div class=rd><div class="card text la">${toks.map((t,j)=>t[0]=='/'?'<br>':`<span class=w data-j=${j}>${esc(t[0])}</span>`).join(' ')}</div><div id=gl class="card gloss"><p class=note>Tap a word.</p></div></div>
   <div class=card><h3>Try this</h3><ol><li>Read it aloud twice.</li><li>Translate it in your head, tapping only words you don't know.</li><li>Write out a full English translation.</li><li>Come back in a week and read it again without help.</li></ol></div>
   <div class=pn>${i>0?`<a class="btn ghost" href="#read-${i-1}">← Previous</a>`:'<span></span>'}${i<READER.length-1?`<a class="btn ghost" href="#read-${i+1}">Next →</a>`:''}</div>`);
   document.querySelectorAll('.w').forEach(s=>s.onclick=()=>{document.querySelectorAll('.w.on').forEach(x=>x.classList.remove('on'));s.classList.add('on');const t=toks[+s.dataset.j];$('#gl').innerHTML=`<p><b class=la>${esc(t[0].replace(/[.,;:?!]/g,''))}</b></p><p>${esc(t[1])}</p>`;bump();});

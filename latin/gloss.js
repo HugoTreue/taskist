@@ -267,8 +267,8 @@
   const s2=e.target.closest('#gb [data-srs]');if(s2&&typeof S!=='undefined'){const id=+s2.dataset.srs;if(!S.srs[id]){S.srs[id]={b:0,due:today()};save()}s2.textContent='In your words ✓'}},true);
  function show(el){const h=html(el);if(!h)return;clearTimeout(hideT);if(cur)cur.classList.remove('gon');cur=el;el.classList.add('gon');
   gb.innerHTML=h;gb.hidden=false;gb.classList.remove('out');gb.style.visibility='hidden';gb.style.left='0px';gb.style.top='0px';
-  const r=el.getBoundingClientRect(),w=Math.min(320,innerWidth-24);gb.style.width=w+'px';const bh=gb.offsetHeight;
-  let x=Math.max(12,Math.min(innerWidth-w-12,r.left+r.width/2-w/2)),below=r.bottom+10+bh<innerHeight-80,y=below?r.bottom+10:r.top-10-bh;
+  const r=el.getBoundingClientRect(),w=Math.min(innerWidth>=1000?360:320,innerWidth-24);gb.style.width=w+'px';const bh=gb.offsetHeight;
+  const lm=innerWidth>=1000?260:12;let x=Math.max(lm,Math.min(innerWidth-w-12,r.left+r.width/2-w/2)),below=r.bottom+10+bh<innerHeight-80,y=below?r.bottom+10:r.top-10-bh;
   if(y<64)y=r.bottom+10;
   gb.style.left=x+'px';gb.style.top=y+'px';gb.style.setProperty('--ax',Math.max(18,Math.min(w-18,r.left+r.width/2-x))+'px');gb.classList.toggle('up',!below&&y<r.top);
   gb.style.visibility='';gb.classList.remove('in');void gb.offsetWidth;gb.classList.add('in');}
