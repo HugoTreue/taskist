@@ -273,7 +273,15 @@
   gb.style.left=x+'px';gb.style.top=y+'px';gb.style.setProperty('--ax',Math.max(18,Math.min(w-18,r.left+r.width/2-x))+'px');gb.classList.toggle('up',!below&&y<r.top);
   gb.style.visibility='';gb.classList.remove('in');void gb.offsetWidth;gb.classList.add('in');}
  function hide(){if(gb.hidden)return;if(cur){cur.classList.remove('gon');cur=null}gb.classList.remove('in');gb.classList.add('out');clearTimeout(hideT);hideT=setTimeout(()=>{gb.hidden=true;gb.classList.remove('out')},180);}
- document.addEventListener('click',e=>{const w=e.target.closest('.gw,.gt');if(w&&!e.target.closest('#gb')){if(w===cur){hide();return}e.preventDefault();show(w);return}if(!e.target.closest('#gb'))hide()},true);
+ // hover to explain (mouse / trackpad): fades in after a moment, fades out when the pointer leaves the word and the bubble
+ const HOV=matchMedia('(hover:hover) and (pointer:fine)');let hovT=0,outT=0,pinned=false;
+ const leaveSoon=()=>{clearTimeout(hovT);if(pinned)return;clearTimeout(outT);outT=setTimeout(()=>{if(!pinned)hide()},260)};
+ document.addEventListener('mouseover',e=>{if(!HOV.matches)return;if(e.target.closest('#gb')){clearTimeout(outT);return}
+  const w=e.target.closest('.gw,.gt');if(!w)return;clearTimeout(outT);if(w===cur)return;if(pinned&&!gb.hidden)return;
+  clearTimeout(hovT);hovT=setTimeout(()=>{pinned=false;show(w)},170)});
+ document.addEventListener('mouseout',e=>{if(!HOV.matches)return;const from=e.target.closest('.gw,.gt,#gb');if(!from)return;const to=e.relatedTarget&&e.relatedTarget.closest&&e.relatedTarget.closest('.gw,.gt,#gb');
+  if(to===from)return;if(to&&to.id==='gb'||to===cur)return;leaveSoon()});
+ document.addEventListener('click',e=>{const w=e.target.closest('.gw,.gt');if(w&&!e.target.closest('#gb')){clearTimeout(hovT);clearTimeout(outT);if(w===cur){if(HOV.matches&&!pinned){pinned=true;return}pinned=false;hide();return}pinned=HOV.matches;e.preventDefault();show(w);return}if(!e.target.closest('#gb')){pinned=false;hide()}},true);
  window.addEventListener('scroll',hide,{passive:true});window.addEventListener('hashchange',hide);window.addEventListener('resize',hide);
  document.addEventListener('keydown',e=>{if(e.key==='Escape')hide()});
 })();
