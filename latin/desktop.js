@@ -6,7 +6,7 @@
  nav.insertBefore(brand,nav.firstChild);
  const foot=document.createElement('div');foot.className='nfoot';nav.appendChild(foot);
  function footer(){const done=Object.keys(S.done).length,cl=curLesson();
-  foot.innerHTML=`<a class=nprog href="#lesson-${cl}">${ring(done/LESSONS.length,46,done+'')}<span><b>${done} of 50 lessons</b><small>Next: ${esc(LESSONS[cl-1].t)}</small></span></a>`;
+  foot.innerHTML=`<a class=ntk href="../"><svg viewBox="0 0 24 24"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>Back to Taskist</a><a class=nprog href="#lesson-${cl}">${ring(done/LESSONS.length,46,done+'')}<span><b>${done} of 50 lessons</b><small>Next: ${esc(LESSONS[cl-1].t)}</small></span></a>`;
   const c=foot.querySelector('.rf');if(c)requestAnimationFrame(()=>requestAnimationFrame(()=>c.style.strokeDashoffset=c.style.getPropertyValue('--off')));}
  // contents panel for lessons
  let spy=null;
