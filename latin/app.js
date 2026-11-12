@@ -56,9 +56,11 @@ function dueCount(){const t=today();return Object.values(S.srs).filter(c=>c.due<
 function ring(p,size,label){const r=size/2-5,c=2*Math.PI*r;return `<svg class=ring width=${size} height=${size} viewBox="0 0 ${size} ${size}"><circle cx=${size/2} cy=${size/2} r=${r} class=rt /><circle cx=${size/2} cy=${size/2} r=${r} class=rf style="stroke-dasharray:${c};stroke-dashoffset:${c};--off:${c*(1-p)}" transform="rotate(-90 ${size/2} ${size/2})"/>${label?`<text x=50% y=50% dominant-baseline=central text-anchor=middle>${label}</text>`:''}</svg>`;}
 function missCount(){return Object.keys(S.miss||{}).length;}
 function tryCount(n){return ((window.TRY||{})[n]||[]).length;}
-const LAUREL=(()=>{const cx=60,cy=8,r=50;let g='';[-1,1].forEach(side=>{let d='';for(let k=0;k<=24;k++){const a=(90+side*(8+k*4.2))*Math.PI/180,x=cx+r*Math.cos(a),y=cy+r*Math.sin(a);d+=(k?'L':'M')+x.toFixed(1)+' '+y.toFixed(1)}g+=`<path d="${d}"/>`;
-  for(let k=1;k<=6;k++){const deg=90+side*(8+k*15),a=deg*Math.PI/180,x=cx+r*Math.cos(a),y=cy+r*Math.sin(a),tan=deg+90*side;[-1,1].forEach(o=>{const lx=x+o*6*Math.cos(a),ly=y+o*6*Math.sin(a);g+=`<ellipse cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" rx="6.5" ry="2.6" transform="rotate(${(tan+o*side*-28).toFixed(0)} ${lx.toFixed(1)} ${ly.toFixed(1)})"/>`})}});
-  return `<svg class=laurel viewBox="0 0 120 64" aria-hidden=true><g fill=none stroke=currentColor stroke-width=1.5 stroke-linecap=round>${g}</g></svg>`})();
+const LAUREL=(()=>{const cx=60,cy=31,r=50;let g='';const E=(x,y,rot)=>`<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="6.5" ry="2.6" transform="rotate(${rot.toFixed(0)} ${x.toFixed(1)} ${y.toFixed(1)})"/>`;
+  [-1,1].forEach(side=>{let d='';const end=8+24*4.2;for(let k=0;k<=24;k++){const a=(90+side*(8+k*4.2))*Math.PI/180;d+=(k?'L':'M')+(cx+r*Math.cos(a)).toFixed(1)+' '+(cy+r*Math.sin(a)).toFixed(1)}g+=`<path d="${d}"/>`;
+   for(let k=1;k<=6;k++){const deg=90+side*(8+k*15),a=deg*Math.PI/180,x=cx+r*Math.cos(a),y=cy+r*Math.sin(a),tan=deg+90*side;[-1,1].forEach(o=>g+=E(x+o*6*Math.cos(a),y+o*6*Math.sin(a),tan+o*side*-28))}
+   const ta=(90+side*end)*Math.PI/180,ex=cx+r*Math.cos(ta),ey=cy+r*Math.sin(ta),vx=-side*Math.sin(ta),vy=side*Math.cos(ta);g+=E(ex+5.5*vx,ey+5.5*vy,Math.atan2(vy,vx)*180/Math.PI)});
+  return `<svg class=laurel viewBox="0 0 120 88" aria-hidden=true><g fill=none stroke=currentColor stroke-width=1.5 stroke-linecap=round>${g}</g></svg>`})();
 function home(){
   const cl=curLesson(),done=Object.keys(S.done).length,phase=PLAN.findIndex(p=>cl>=p.l[0]&&cl<=p.l[1]);
   const acc=S.stats.t?Math.round(100*S.stats.r/S.stats.t):0,L=LESSONS[cl-1],mc=missCount(),allDone=done>=LESSONS.length;
