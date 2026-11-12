@@ -16,9 +16,13 @@
  window.afterRender=function(){titleEl=document.querySelector('#main h1,#main h2');tt.textContent=titleEl?titleEl.textContent.trim():'Lingua Latina';onScroll();};
  // back arrow: inside a lesson/text go up one level; on main pages go back to Taskist if we came from it
  const fromT=(()=>{try{return sessionStorage.getItem('latin.from')==='taskist'}catch(e){return false}})();
- window.afterRoute=function(h){const up=/^lesson-/.test(h)?'#learn':/^read-/.test(h)?'#read':h==='ref'?'#home':null;
-  back.hidden=!(up||fromT);back.dataset.up=up||'';bar.style.paddingLeft=back.hidden?'14px':'6px';};
- back.onclick=()=>{const up=back.dataset.up;if(up)location.hash=up;else location.href='../';};
+ // remember the pages visited in this session so the arrow goes back to the previous one
+ const stack=[];
+ window.afterRoute=function(h){h=h||'home';
+  if(stack.length>1&&stack[stack.length-2]===h)stack.pop();else if(stack[stack.length-1]!==h)stack.push(h);
+  const up=/^lesson-/.test(h)?'#learn':/^read-/.test(h)?'#read':/^(ref|review)$/.test(h)?'#home':null;
+  back.hidden=!(stack.length>1||up||fromT);back.dataset.up=up||'';bar.style.paddingLeft=back.hidden?'14px':'6px';};
+ back.onclick=()=>{if(stack.length>1){history.back();return}const up=back.dataset.up;if(up)location.hash=up;else location.href='../';};
  // light / dark switch (Taskist passes its theme when it opens this page)
  const mtc=document.getElementById('mtc');
  function syncMeta(){mtc.setAttribute('content',document.documentElement.dataset.th==='dark'?'#1b1815':'#f6f1e7');}
