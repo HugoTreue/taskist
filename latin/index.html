@@ -9,8 +9,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
 <script>
-/* Theme: follow Taskist when opened from it (?th=), otherwise remember last choice, otherwise the phone setting */
-(function(){var q=new URLSearchParams(location.search),t=q.get('th');try{if(t)localStorage.setItem('latin.th',t);else t=localStorage.getItem('latin.th')}catch(e){}
+/* Theme: the last one you picked here; the first time, follow Taskist (?th=), otherwise the phone setting */
+(function(){var q=new URLSearchParams(location.search),t=null;try{t=localStorage.getItem('latin.th')}catch(e){}if(t!=='dark'&&t!=='light')t=q.get('th');
  if(t!=='dark'&&t!=='light')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.dataset.th=t;
  if(q.get('from')==='taskist'){try{sessionStorage.setItem('latin.from','taskist')}catch(e){}}})();
 </script>
