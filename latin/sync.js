@@ -14,8 +14,10 @@ window.LSYNC=(function(){
     try{localStorage.setItem(KEY,JSON.stringify(n))}catch(e){}return n.access}).finally(()=>{refreshing=null});
   return refreshing}
  function rest(m,qs,body,ex){return token().then(t=>fetch(URL0+'/rest/v1/lifeloop_docs'+qs,{method:m,headers:Object.assign(hdr(t),ex||{}),body:body?JSON.stringify(body):undefined,cache:'no-store'}).then(jt))}
- const get=()=>rest('GET','?select=json,updated_at&name=eq.'+DOC+'&limit=1').then(r=>r&&r[0]?r[0].json:null);
- const put=j=>rest('POST','?on_conflict=user_id,name',{user_id:ld().uid,name:DOC,json:j,updated_at:Date.now()},{Prefer:'resolution=merge-duplicates,return=minimal'});
+ // the json column is text: store a JSON string, read it back with JSON.parse
+ const clean=o=>{if(!o||typeof o!=='object')return null;for(const k of Object.keys(o))if(/^\d+$/.test(k))delete o[k];return o};
+ const get=()=>rest('GET','?select=json,updated_at&name=eq.'+DOC+'&limit=1').then(r=>{if(!r||!r[0])return null;let j=r[0].json;if(typeof j==='string'){try{j=JSON.parse(j)}catch(e){j=null}}return clean(j)});
+ const put=j=>rest('POST','?on_conflict=user_id,name',{user_id:ld().uid,name:DOC,json:JSON.stringify(j),updated_at:Date.now()},{Prefer:'resolution=merge-duplicates,return=minimal'});
 
  // ---- merge two progress states: nothing done on either device is lost ----
  const num=v=>typeof v==='number'?v:(v?1:0);
@@ -45,7 +47,7 @@ window.LSYNC=(function(){
   return 'Synced with your Taskist account'+(s.lastAt?' · '+new Date(s.lastAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'')}
  function run(){if(!status().signed)return Promise.resolve(false);if(busy){again=true;return busy}
   state='busy';paint();
-  busy=get().then(remote=>{const before=JSON.stringify(S),m=merge(S,remote);
+  busy=get().then(remote=>{clean(S);const before=JSON.stringify(S),m=merge(S,remote);
     if(JSON.stringify(m)!==before){S=Object.assign(S,m);for(const k of Object.keys(S))if(!(k in m))delete S[k];try{localStorage.setItem('latin2y_v1',JSON.stringify(S))}catch(e){}refresh()}
     if(JSON.stringify(remote)!==JSON.stringify(m))return put(m)})
    .then(()=>{state='ok';err='';lastAt=Date.now();try{localStorage.setItem('latin.synced',lastAt)}catch(e){}})
@@ -62,6 +64,8 @@ window.LSYNC=(function(){
  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')soon(300);else if(tmr){clearTimeout(tmr);run()}});
  addEventListener('online',()=>soon(300));
  addEventListener('storage',e=>{if(e.key===KEY)paint()});
+ // tidy any junk an earlier sync bug left in this device's copy
+ try{if(Object.keys(S).some(k=>/^\d+$/.test(k))){clean(S);localStorage.setItem('latin2y_v1',JSON.stringify(S))}}catch(e){}
  setTimeout(run,600);
  return {run,status,label,paint,merge}
 })();
