@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="build" content="20261112-010630">
+<meta name="build" content="20261112-012741">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Taskist</title>
 <meta name="theme-color" content="#000000" id="mtc">
@@ -281,7 +281,7 @@ html{background:var(--bg)}
 .chip.oth i,.edm .chip i{transition:transform .25s cubic-bezier(.2,.8,.2,1)}
 .chip.open i{transform:rotate(180deg)}
 .edm .chip.has{color:var(--ac)}
-.ed.view .edtop .ic:not(#edBack){display:none}
+.ed.view .edtop .ic:not(#edBack):not(#edDup){display:none}
 #edMore{display:none}
 .ed.view .edt:placeholder-shown{display:none}
 .ed.view #edbar,.ed:not(.view) #vbar{display:none}
@@ -651,6 +651,7 @@ i.dn2{background:var(--mu);border-color:var(--mu)}
 <div class="ed" id="ed" hidden>
  <div class="edtop">
   <button class="ic" data-a="edback" aria-label="Back" id="edBack"></button><span class="sp"></span>
+  <button class="ic" data-a="eddup" aria-label="Duplicate" title="Duplicate" id="edDup"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg></button>
   <button class="ic" data-a="undo" aria-label="Undo" id="edU"></button>
   <button class="ic" data-a="redo" aria-label="Redo" id="edR"></button>
   <button class="ic" data-a="edmore" aria-label="More" id="edMore"></button>
@@ -1275,6 +1276,12 @@ function edSave(){
  if(cur._new){delete cur._new;(cur.isTpl?S.tpls:S.notes).unshift(cur)}
  save();edMeta();if(cur.isTpl)ensureDaily();
 }
+var dupT=0;function dupNote(){if(!cur||Date.now()-dupT<700)return;dupT=Date.now();edSave();
+ var src=cur,now=Date.now(),c=JSON.parse(JSON.stringify(src));
+ c.id=(src.isTpl?'t_':'')+uid();c.title=((src.title||'').trim()||'Untitled')+' COPY';c.html=src._new?cleanHtml():src.html;c.created=now;c.updated=now;c.del=0;delete c._new;delete c.tid;delete c.day;delete c.tv;var hadRep=src.isTpl&&(c.rep||[]).length;if(hadRep)c.rep=[];
+ var arr=src.isTpl?S.tpls:S.notes,i=arr.indexOf(src);if(i>-1)arr.splice(i,0,c);else arr.unshift(c);save();
+ cur=c;edDirty=false;savedRange=null;edT.value=c.title;fitTitle();edB.innerHTML=c.html||'';migrateSizes();habitMarks();edMeta();syncFav();$('#edsc').scrollTop=0;
+ if(src.isTpl&&typeof pgRedraw==='function'&&pgRedraw)pgRedraw();toast(src.isTpl?(hadRep?'Template duplicated · repeat is off on the copy':'Template duplicated'):'Note duplicated');if(window.TKSYNC)TKSYNC.soon();}
 function cleanHtml(){var h=edB.innerHTML.replace(/\u2063/g,'').replace(/\s*--(cy|mk):\s*[^;"]*;?/g,'').replace(/ style="\s*"/g,'').replace(/ data-st(o)?="[^"]*"/g,'');if(/^(<div><br><\/div>|<br>)+$/.test(h))return '';return h}
 function edChanged(){edDirty=true;clearTimeout(edSaveT);edSaveT=setTimeout(edSave,500)}
 function closeNote(){
@@ -1432,6 +1439,7 @@ $('#ed').addEventListener('click',function(e){
  var el=e.target.closest('[data-a]');if(!el)return;var a=el.dataset.a;
  if(a==='edback'){closeTop()}
  else if(a==='eddone'){edSave();setMode(true)}
+ else if(a==='eddup'){dupNote()}
  else if(a==='undo'){restoreRange();document.execCommand('undo');edChanged()}
  else if(a==='redo'){restoreRange();document.execCommand('redo');edChanged()}
  else if(a==='chk'){listCmd('chk')}
