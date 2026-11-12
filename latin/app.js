@@ -36,11 +36,21 @@ function renderBody(b){
 // ---------- router ----------
 const VIEWS={home,learn,drill,words,read,write,ref,review};
 let firstRoute=true,routeT=0;
+// remember where you were on each page: restored after a reload, when you come back to the tab, or when you go back
+const scrollMem=(()=>{let M={};try{M=JSON.parse(sessionStorage.getItem('latin.scroll')||'{}')}catch(e){}let first=true,back=false;
+  const key=()=>(location.hash||'#home').slice(1);
+  const keep=()=>{M[key()]=Math.round(scrollY);try{sessionStorage.setItem('latin.scroll',JSON.stringify(M))}catch(e){}};
+  let t=0;addEventListener('scroll',()=>{clearTimeout(t);t=setTimeout(keep,200)},{passive:true});
+  addEventListener('pagehide',keep);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')keep()});
+  addEventListener('hashchange',e=>{const o=(new URL(e.oldURL).hash||'#home').slice(1);M[o]=Math.round(scrollY);try{sessionStorage.setItem('latin.scroll',JSON.stringify(M))}catch(x){}},true);
+  return {back(){back=true},keepNow:keep,want(h){const r=(first||back)?M[h]||0:0;first=false;back=false;return r}}})();
+window.scrollMem=scrollMem;
 function route(){const h=(location.hash||'#home').slice(1);
   document.querySelectorAll('nav a').forEach(a=>a.classList.toggle('on',h.startsWith(a.dataset.v)));
   const run=()=>{let m;const main=$('#main');main.scrollTop=0;window.scrollTo(0,0);
     if((m=h.match(/^lesson-(\d+)$/)))lesson(+m[1]);else if((m=h.match(/^learn-(\d+)$/)))learn(+m[1]);else if((m=h.match(/^read-(\d+)$/)))readText(+m[1]);else (VIEWS[h]||home)();
-    if(window.afterRoute)afterRoute(h);};
+    if(window.afterRoute)afterRoute(h);
+    const y=scrollMem.want(h);if(y){window.__restoring=true;requestAnimationFrame(()=>scrollTo(0,y));setTimeout(()=>window.__restoring=false,600)}};
   const main=$('#main');
   if(firstRoute||matchMedia('(prefers-reduced-motion: reduce)').matches){firstRoute=false;run();return;}
   clearTimeout(routeT);main.classList.remove('mfi');main.classList.add('mfo');
@@ -96,7 +106,7 @@ function learn(focus){
     h+='</ol></section>';});
   setMain(h+'</div>');ringIn();
   const tgt=typeof focus==='number'?document.getElementById('unit-'+focus):document.querySelector('.node.cur');
-  if(tgt&&(typeof focus==='number'||done))setTimeout(()=>{const y=tgt.getBoundingClientRect().top+scrollY-(typeof focus==='number'?70:200);scrollTo({top:Math.max(0,y),behavior:'smooth'})},260);
+  if(focus!=='keep'&&tgt&&(typeof focus==='number'||done))setTimeout(()=>{if(window.__restoring)return;const y=tgt.getBoundingClientRect().top+scrollY-(typeof focus==='number'?70:200);scrollTo({top:Math.max(0,y),behavior:'smooth'})},260);
 }
 
 function markMiss(k,ok){S.miss=S.miss||{};S.missX=S.missX||{};const t=Date.now();if(ok){delete S.miss[k];S.missX[k]=t}else{S.miss[k]=t;delete S.missX[k]}}

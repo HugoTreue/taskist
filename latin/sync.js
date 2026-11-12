@@ -40,6 +40,8 @@ window.LSYNC=(function(){
   o.streak=pick(a.streak,b.streak);o.newDay=pick(a.newDay,b.newDay);
   return o}
 
+ // compare by content, not key order
+ const canon=o=>JSON.stringify(o,(k,v)=>v&&typeof v==='object'&&!Array.isArray(v)?Object.keys(v).sort().reduce((r,x)=>(r[x]=v[x],r),{}):v);
  function status(){const c=ld();return {signed:!!(c.refresh&&c.uid),email:c.email||'',state,lastAt,err}}
  function paint(){document.querySelectorAll('[data-lsync]').forEach(el=>el.innerHTML=label());}
  function label(){const s=status();if(!s.signed)return 'Not syncing. Sign in to Taskist (Settings → Sync & backup) and your Latin progress will sync too.';
@@ -48,16 +50,18 @@ window.LSYNC=(function(){
  function run(){if(!status().signed)return Promise.resolve(false);if(busy){again=true;return busy}
   state='busy';paint();
   const limit=new Promise((_,rej)=>setTimeout(()=>rej(new Error('timed out')),25000));
-  busy=Promise.race([limit,get()]).then(remote=>{clean(S);const before=JSON.stringify(S),m=merge(S,remote);
-    if(JSON.stringify(m)!==before){S=Object.assign(S,m);for(const k of Object.keys(S))if(!(k in m))delete S[k];try{localStorage.setItem('latin2y_v1',JSON.stringify(S))}catch(e){}refresh()}
-    if(JSON.stringify(remote)!==JSON.stringify(m))return Promise.race([limit,put(m)])})
+  busy=Promise.race([limit,get()]).then(remote=>{clean(S);const before=canon(S),m=merge(S,remote);
+    if(canon(m)!==before){S=Object.assign(S,m);for(const k of Object.keys(S))if(!(k in m))delete S[k];try{localStorage.setItem('latin2y_v1',JSON.stringify(S))}catch(e){}refresh()}
+    if(canon(remote)!==canon(m))return Promise.race([limit,put(m)])})
    .then(()=>{state='ok';err='';lastAt=Date.now();try{localStorage.setItem('latin.synced',lastAt)}catch(e){}})
    .catch(e=>{state=/Signed out/.test(e.message)?'idle':'error';err=e.message})
    .finally(()=>{busy=null;paint();if(again){again=false;soon(800)}});
   return busy}
  function refresh(){try{$('#streak').textContent=(S.streak.d>=today()-1?S.streak.n:0)+' day streak'}catch(e){}
-  const h=(location.hash||'#home').slice(1),busyNow=document.activeElement&&/INPUT|TEXTAREA/.test(document.activeElement.tagName);
-  if(!busyNow&&(/^(home|learn)/.test(h)||(/^lesson-/.test(h)&&!document.querySelector('.opt:disabled'))))try{route()}catch(e){}}
+  // only redraw overview pages, and keep the scroll position; lessons and exercises are left alone
+  const h=(location.hash||'#home').slice(1),typing=document.activeElement&&/INPUT|TEXTAREA/.test(document.activeElement.tagName);
+  if(typing||!/^(home|learn)/.test(h))return;const y=scrollY,main=$('#main');
+  try{main.classList.remove('mfi','mfo');(h.startsWith('learn-')?()=>learn(+h.split('-')[1]):h==='learn'?()=>learn('keep'):home)();if(window.afterRoute)afterRoute(h)}catch(e){}scrollTo(0,y)}
  function soon(ms){clearTimeout(tmr);tmr=setTimeout(run,ms||2000)}
  // push shortly after every save
  const sv=window.save;window.save=function(){sv.apply(this,arguments);if(status().signed)soon(2500)};

@@ -19,7 +19,7 @@
  // remember the pages visited in this session so the arrow goes back to the previous one
  const stack=[];
  window.afterRoute=function(h){h=h||'home';
-  if(stack.length>1&&stack[stack.length-2]===h)stack.pop();else if(stack[stack.length-1]!==h)stack.push(h);
+  if(stack.length>1&&stack[stack.length-2]===h){stack.pop();if(window.scrollMem)scrollMem.back();}else if(stack[stack.length-1]!==h)stack.push(h);
   const up=/^lesson-/.test(h)?'#learn':/^read-/.test(h)?'#read':/^(ref|review)$/.test(h)?'#home':null;
   back.hidden=h==='home'||!(stack.length>1||up||fromT);back.dataset.up=up||'';bar.style.paddingLeft=back.hidden?'14px':'6px';};
  back.onclick=()=>{if(stack.length>1){history.back();return}const up=back.dataset.up;if(up)location.hash=up;else location.href='../';};
