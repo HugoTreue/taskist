@@ -47,9 +47,10 @@ window.LSYNC=(function(){
   return 'Synced with your Taskist account'+(s.lastAt?' · '+new Date(s.lastAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'')}
  function run(){if(!status().signed)return Promise.resolve(false);if(busy){again=true;return busy}
   state='busy';paint();
-  busy=get().then(remote=>{clean(S);const before=JSON.stringify(S),m=merge(S,remote);
+  const limit=new Promise((_,rej)=>setTimeout(()=>rej(new Error('timed out')),25000));
+  busy=Promise.race([limit,get()]).then(remote=>{clean(S);const before=JSON.stringify(S),m=merge(S,remote);
     if(JSON.stringify(m)!==before){S=Object.assign(S,m);for(const k of Object.keys(S))if(!(k in m))delete S[k];try{localStorage.setItem('latin2y_v1',JSON.stringify(S))}catch(e){}refresh()}
-    if(JSON.stringify(remote)!==JSON.stringify(m))return put(m)})
+    if(JSON.stringify(remote)!==JSON.stringify(m))return Promise.race([limit,put(m)])})
    .then(()=>{state='ok';err='';lastAt=Date.now();try{localStorage.setItem('latin.synced',lastAt)}catch(e){}})
    .catch(e=>{state=/Signed out/.test(e.message)?'idle':'error';err=e.message})
    .finally(()=>{busy=null;paint();if(again){again=false;soon(800)}});
