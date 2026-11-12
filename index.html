@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="build" content="20261112-075920">
+<meta name="build" content="20261112-093216">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Taskist</title>
 <meta name="theme-color" content="#000000" id="mtc">
@@ -1484,12 +1484,13 @@ var TKSYNC=window.TKSYNC=(function(){
  var KEY='taskist.sb',URL0='https://dmajmexhjbdiajzutjkg.supabase.co',PUB='sb_publishable_v78lR6DRaC09bRxfJ2xBdQ_SlW1nwt1',DOC='taskist';
  function ld(){try{return JSON.parse(localStorage.getItem(KEY)||'{}')||{}}catch(e){return {}}}
  var c=ld(),busy=null,again=false,tmr=0,last=c.last||0,err='';
- function st(){try{localStorage.setItem(KEY,JSON.stringify(c))}catch(e){}}
+ function adopt(){var n=ld();if(c.refresh&&n.refresh&&n.refresh!==c.refresh&&(n.exp||0)>(c.exp||0)){c.access=n.access;c.refresh=n.refresh;c.exp=n.exp}}
+ function st(){adopt();try{localStorage.setItem(KEY,JSON.stringify(c))}catch(e){}}
  function hdr(t){var h={apikey:PUB,'Content-Type':'application/json'};if(t)h.Authorization='Bearer '+t;return h}
  function jt(r){return r.text().then(function(t){var j=null;try{j=t?JSON.parse(t):null}catch(e){}if(!r.ok)throw new Error((j&&(j.msg||j.error_description||j.message||j.error))||('HTTP '+r.status));return j})}
  function auth(p,b){return fetch(URL0+'/auth/v1/'+p,{method:'POST',headers:hdr(),body:JSON.stringify(b)}).then(jt)}
  function sess(j){c.access=j.access_token;c.refresh=j.refresh_token;c.exp=Date.now()+Math.max(60,(j.expires_in||3600))*1000-60000;if(j.user){c.uid=j.user.id;c.email=j.user.email||c.email}st()}
- function token(){if(c.access&&Date.now()<c.exp)return Promise.resolve(c.access);if(!c.refresh)return Promise.reject(new Error('Signed out'));
+ function token(){adopt();if(c.access&&Date.now()<c.exp)return Promise.resolve(c.access);if(!c.refresh)return Promise.reject(new Error('Signed out'));
   return auth('token?grant_type=refresh_token',{refresh_token:c.refresh}).then(function(j){sess(j);return c.access},function(e){if(/invalid|expired|not found|revoked/i.test(e.message)){c.access=c.refresh=null;st()}throw e})}
  function rest(m,qs,body,ex){return token().then(function(t){return fetch(URL0+'/rest/v1/lifeloop_docs'+qs,{method:m,headers:Object.assign(hdr(t),ex||{}),body:body?JSON.stringify(body):undefined,cache:'no-store'}).then(jt)})}
  function get(name){return rest('GET','?select=json,updated_at&name=eq.'+encodeURIComponent(name)+'&limit=1').then(function(r){return r&&r[0]?{json:r[0].json,rev:+r[0].updated_at}:null})}

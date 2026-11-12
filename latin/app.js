@@ -78,8 +78,9 @@ function home(){
   <div class=card><h3>Daily routine (≈ 50 min)</h3>${DAILY.map(d=>`<div class=row><b>${d[0]}</b><span>${d[1]}</span></div>`).join('')}</div>
   <div class=card><h3>The 2-year plan</h3>${PLAN.map((p,i)=>`<details ${i==phase?'open':''} class="phase ${i==phase?'now':''}"><summary><b>${p.m}</b> <span>Lessons ${p.l[0]}${p.l[1]!=p.l[0]?'–'+p.l[1]:''} · ${p.words} words</span></summary><p><b>Goal:</b> ${p.goal}</p><p><b>Read:</b> ${p.read}</p></details>`).join('')}
   <p class=note>Companion book (optional but recommended): <i>Lingua Latina per se Illustrata</i>, Part I <i>Familia Romana</i> and Part II <i>Roma Aeterna</i>, by Hans Ørberg.</p></div>
-  <div class=card><h3>Your data</h3><p class=note>Progress is saved in this browser only.</p><button class="btn ghost" id=reset>Reset all progress</button></div></div></div>`);
-  $('#reset').onclick=e=>{if(e.target.dataset.c){S={done:{},srs:{},streak:{d:0,n:0},stats:{r:0,t:0},newDay:{d:0,n:0},wDone:{},miss:{},tried:{}};save();hdr();home();}else{e.target.dataset.c=1;e.target.textContent='Tap again to confirm';}};
+  <div class=card><h3>Sync & data</h3><p class=note data-lsync>${window.LSYNC?LSYNC.label():''}</p><div class=row2><button class="btn ghost" id=syncnow>Sync now</button><button class="btn ghost" id=reset>Reset all progress</button></div></div></div></div>`);
+  $('#reset').onclick=e=>{if(e.target.dataset.c){S={done:{},srs:{},streak:{d:0,n:0},stats:{r:0,t:0},newDay:{d:0,n:0},wDone:{},miss:{},tried:{},epoch:Date.now()};save();hdr();home();}else{e.target.dataset.c=1;e.target.textContent='Tap again to confirm';}};
+  const sn=$('#syncnow');if(sn)sn.onclick=()=>{if(window.LSYNC)LSYNC.run()};
   ringIn();
 }
 function ringIn(){requestAnimationFrame(()=>requestAnimationFrame(()=>document.querySelectorAll('.ring .rf').forEach(c=>c.style.strokeDashoffset=c.style.getPropertyValue('--off'))));}
@@ -98,7 +99,7 @@ function learn(focus){
   if(tgt&&(typeof focus==='number'||done))setTimeout(()=>{const y=tgt.getBoundingClientRect().top+scrollY-(typeof focus==='number'?70:200);scrollTo({top:Math.max(0,y),behavior:'smooth'})},260);
 }
 
-function markMiss(k,ok){S.miss=S.miss||{};if(ok)delete S.miss[k];else S.miss[k]=1;}
+function markMiss(k,ok){S.miss=S.miss||{};S.missX=S.missX||{};const t=Date.now();if(ok){delete S.miss[k];S.missX[k]=t}else{S.miss[k]=t;delete S.missX[k]}}
 function tryCard(q,key){return `<div class="card try" data-k="${key}"><div class=tyk><svg viewBox="0 0 24 24"><path d="M12 20h8.5"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>Try it</div><p class=tq>${q[0].replace(/<i>/g,'<i class=la>')}</p><div class=opts>${shuffle(q[1].map((o,i)=>i)).map(i=>`<button class=opt data-i=${i}>${q[1][i].replace(/<i>/g,'<i class=la>')}</button>`).join('')}</div><div class=tfb></div></div>`;}
 function wireTry(el,q,onDone){el.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{const ok=+b.dataset.i===q[2];
   el.querySelectorAll('.opt').forEach(x=>{x.disabled=true;if(+x.dataset.i===q[2])x.classList.add('right')});if(!ok)b.classList.add('wrong');
@@ -143,12 +144,12 @@ function lesson(n){
   <div class=pn>${n>1?`<a class="btn ghost" href="#lesson-${n-1}">← Back</a>`:'<span></span>'}<button class="btn ${S.done[n]?'ghost':''}" id=mark>${S.done[n]?'Completed ✓':'Mark complete'}</button></div>
   ${nx?`<a class="card nxt" href="#lesson-${n+1}"><span class=xk>Next lesson</span><b>${n+1}. ${esc(nx.t)}</b><span class=nar>→</span></a>`:''}`);
   if(L.dr)$('#prac').onclick=()=>{DR.preset=L.dr;go('drill');};
-  $('#mark').onclick=()=>{S.done[n]=S.done[n]?0:1;if(!S.done[n])delete S.done[n];save();bump();lesson(n);};
+  $('#mark').onclick=()=>{S.doneX=S.doneX||{};if(S.done[n]){delete S.done[n];S.doneX[n]=Date.now()}else{S.done[n]=Date.now();delete S.doneX[n]}save();bump();lesson(n);};
   if(NR&&TR.length)placeTries(n,TR);
   readProgress();
   let qi=0,score=0;const qs=L.q;
   function showQ(){const q=qs[qi];if(!q){$('#quiz').innerHTML=`<p class=big>${score}/${qs.length} correct</p>${score>=qs.length-1?'<p>Lesson complete ✓</p>':'<p>Review the lesson and try again.</p>'}<button class="btn ghost" id=again>Retry quiz</button>`;
-      if(score>=qs.length-1&&!S.done[n]){S.done[n]=1;save();$('#mark').textContent='Completed ✓';$('#mark').classList.add('ghost');}
+      if(score>=qs.length-1&&!S.done[n]){S.done[n]=Date.now();if(S.doneX)delete S.doneX[n];save();$('#mark').textContent='Completed ✓';$('#mark').classList.add('ghost');}
       $('#again').onclick=()=>{qi=0;score=0;showQ();};return;}
     const order=shuffle(q[1].map((o,i)=>i));
     $('#quiz').innerHTML=`<p class=qn>${qi+1}/${qs.length}</p><p class=q>${esc(q[0])}</p><div class=opts>${order.map(i=>`<button class=opt data-i=${i}>${esc(q[1][i])}</button>`).join('')}</div><div id=fb></div>`;
@@ -249,7 +250,7 @@ function card(){
 }
 function grade(id,g){const t=today();let c=S.srs[id];if(!c){c={b:0,due:t};S.newDay.n++;}
   if(g==0){c.b=0;c.due=t;WS.queue.push(id);}else{c.b=Math.min(INT.length-1,c.b+g);c.due=t+INT[c.b];}
-  S.srs[id]=c;WS.queue.shift();bump(g>0);card();}
+  c.t=Date.now();S.srs[id]=c;WS.queue.shift();bump(g>0);card();}
 function wordList(){
   $('#wb').innerHTML=`<input id=wq class=search placeholder="Search Latin or English…" value="${esc(WS.q)}"><div id=wl class=list></div>`;
   const draw=()=>{const q=plain(WS.q);const ls=VOCAB.filter(w=>!q||plain(w.lem).includes(q)||plain(w.mean).includes(q));

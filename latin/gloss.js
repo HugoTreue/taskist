@@ -264,7 +264,7 @@
   document.body.appendChild(sh);requestAnimationFrame(()=>sh.classList.add('in'));const close=()=>{sh.classList.remove('in');sh.classList.add('out');setTimeout(()=>sh.remove(),230)};
   sh.querySelector('.tsc').onclick=close;sh.querySelector('.tsx').onclick=close;window.addEventListener('hashchange',close,{once:true})}
  document.addEventListener('click',e=>{const b=e.target.closest('#gb [data-tab]');if(b){tableSheet(+b.dataset.tab);return}
-  const s2=e.target.closest('#gb [data-srs]');if(s2&&typeof S!=='undefined'){const id=+s2.dataset.srs;if(!S.srs[id]){S.srs[id]={b:0,due:today()};save()}s2.textContent='In your words ✓'}},true);
+  const s2=e.target.closest('#gb [data-srs]');if(s2&&typeof S!=='undefined'){const id=+s2.dataset.srs;if(!S.srs[id]){S.srs[id]={b:0,due:today(),t:Date.now()};save()}s2.textContent='In your words ✓'}},true);
  function show(el){const h=html(el);if(!h)return;clearTimeout(hideT);if(cur)cur.classList.remove('gon');cur=el;el.classList.add('gon');
   gb.innerHTML=h;gb.hidden=false;gb.classList.remove('out');gb.style.visibility='hidden';gb.style.left='0px';gb.style.top='0px';
   const r=el.getBoundingClientRect(),w=Math.min(innerWidth>=1000?360:320,innerWidth-24);gb.style.width=w+'px';const bh=gb.offsetHeight;
