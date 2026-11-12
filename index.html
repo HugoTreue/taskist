@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="build" content="20261112-012741">
+<meta name="build" content="20261112-014137">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Taskist</title>
 <meta name="theme-color" content="#000000" id="mtc">
@@ -393,6 +393,7 @@ html{background:var(--bg)}
 @keyframes dlo{to{opacity:0;transform:translateY(-50%) scale(.95)}}
 @keyframes eout{to{opacity:0;transform:translateY(10px) scale(.99)}}
 .dlg{animation:dli .16s}
+.dlg .btn.yes{background:#2f9e55;color:#fff}.dlg .btn.no{background:#e5484d;color:#fff}.dlg.sure .sbtns{gap:10px}.dlg.sure .sbtns .btn{flex:1;font-weight:600}
 @keyframes dli{from{opacity:0;transform:translateY(-50%) scale(.95)}}
 .nav,.selbar{max-width:680px;margin:0 auto}
 @media (hover:hover){
@@ -815,7 +816,8 @@ function dlg(title,html,btns,onOpen){
  if(onOpen)onOpen(d);return d;
 }
 function promptDlg(title,val,ph,cb){dlg(title,'<input id="pdI" maxlength="60" placeholder="'+esc(ph||'')+'" value="'+esc(val||'')+'">',[{t:'Cancel'},{t:'Save',c:'pri',f:function(d){var v=$('#pdI',d).value.trim();if(v)cb(v)}}],function(d){var i=$('#pdI',d);setTimeout(function(){i.focus();i.select()},60);i.onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();d.querySelector('.btn.pri').click()}}})}
-function confirmDlg(title,text,ok,cb){dlg(title,'<p>'+esc(text)+'</p>',[{t:'Cancel'},{t:ok,c:'dan',f:cb}])}
+function sureDlg(text,cb){dlg('Are you sure?',text?'<p>'+esc(text)+'</p>':'',[{t:'No',c:'no'},{t:'Yes',c:'yes',f:cb}],function(d){d.classList.add('sure')})}
+function confirmDlg(title,text,ok,cb){sureDlg(title+(text?' '+text:''),cb)}
 /* ---------- data helpers ---------- */
 function catName(id){var c=S.cats.filter(function(x){return x.id===id})[0];return c?c.name:''}
 function noteText(n){var d=document.createElement('div');d.innerHTML=n.html||'';$$('br',d).forEach(function(x){x.insertAdjacentText('afterend','\n')});$$('li,div,p,ul,ol,h1,h2,h3',d).forEach(function(x){x.insertAdjacentText('beforebegin','\n');x.insertAdjacentText('beforeend','\n')});return (d.textContent||'').replace(/\n{2,}/g,'\n').trim()}
@@ -951,7 +953,7 @@ function todoSheet(t){
   dd.onchange=function(){if(dd.value){o.due=new Date(dd.value).getTime();o.nt=0}redo()};
   sh.addEventListener('click',function(e){var b=e.target.closest('[data-k]');if(!b)return;var k=b.dataset.k;
    if(k==='save')doSave();
-   else if(k==='del'){closeTop(function(){delTodos([t.id])})}
+   else if(k==='del'){sureDlg('This to-do will be deleted.',function(){closeTop(function(){delTodos([t.id])})})}
    else if(k==='pri'){o.pri=(o.pri+1)%3;redo()}
    else if(k==='cat'){catPop(b,o.cat,function(c){o.cat=c;redo()})}
    else if(k==='rep'){popMenu(b,[{t:'Does not repeat',hl:!o.rep,f:function(){o.rep='';redo()}}].concat(REPS.map(function(r){return {t:r[1],hl:o.rep===r[0],f:function(){o.rep=r[0];if(!o.due){o.due=defDue();o.nt=0;toast('Starts '+fdue(o.due).toLowerCase())}redo()}}})),{arrow:b,left:1})}
@@ -1133,13 +1135,13 @@ $('#fImp').onchange=function(){var f=this.files[0];this.value='';if(!f)return;va
 /* ---------- selection ---------- */
 function enterSel(id){selMode=true;sel={};if(id)sel[id]=1;render()}
 function selIds(){return Object.keys(sel)}
-function selAct(a,btn){
+var selSure=false;function selAct(a,btn){
  var ids=selIds();if(!ids.length)return;var src=tab==='notes'?S.notes:S.todos,items=src.filter(function(x){return ids.indexOf(x.id)>-1}),n=Date.now();
  if(a==='spin'){var ap=items.every(function(x){return x.pin});items.forEach(function(x,i){x.pin=ap?0:n+i});save();selMode=false;sel={};render();toast(ap?'Unpinned':'Pinned to top')}
  else if(a==='sstar'){var all=items.every(function(x){return x.star});items.forEach(function(x){x.star=all?0:1;x.updated=x.updated||n});save();selMode=false;sel={};render();toast(all?'Unstarred':'Starred')}
  else if(a==='spri'){pickPri(btn,items.length===1?items[0].pri:-1,function(p){items.forEach(function(x){x.pri=p});save();selMode=false;sel={};render();toast(p===1?'Marked Primary':p===2?'Marked Secondary':'Priority removed')})}
  else if(a==='smove'){pickCat(items.length===1?items[0].cat:null,function(c){items.forEach(function(x){x.cat=c});save();selMode=false;sel={};render();toast(c?'Moved to '+catName(c):'Section removed')})}
- else if(a==='sdel'){if(tab==='todos'){delTodos(ids);return}var snap=JSON.stringify(S.notes);items.forEach(function(x){x.del=n});save();selMode=false;sel={};render();toast(ids.length===1?'Moved to Recently deleted':ids.length+' notes moved to Recently deleted',function(){S.notes=JSON.parse(snap);save();render()})}
+ else if(a==='sdel'){if(!selSure){sureDlg(ids.length===1?(tab==='todos'?'This to-do will be deleted.':'This note will move to Recently deleted.'):ids.length+(tab==='todos'?' to-dos will be deleted.':' notes will move to Recently deleted.'),function(){selSure=true;try{selAct(a,btn)}finally{selSure=false}});return}if(tab==='todos'){delTodos(ids);return}var snap=JSON.stringify(S.notes);items.forEach(function(x){x.del=n});save();selMode=false;sel={};render();toast(ids.length===1?'Moved to Recently deleted':ids.length+' notes moved to Recently deleted',function(){S.notes=JSON.parse(snap);save();render()})}
  else if(a==='srest'){items.forEach(function(x){x.del=0});save();selMode=false;sel={};render();toast('Restored')}
  else if(a==='sdelf'){confirmDlg('Delete for good?',ids.length+(ids.length===1?' note':' notes')+' will be gone forever.','Delete',function(){S.notes=S.notes.filter(function(x){return ids.indexOf(x.id)<0});save();selMode=false;sel={};render()})}
  else if(a==='tsdone'){var ad=items.every(function(x){return x.done});items.forEach(function(x){x.done=!ad;x.doneAt=ad?0:n});save();selMode=false;sel={};render();toast(ad?'Marked not done':'Marked done')}
@@ -1460,7 +1462,8 @@ $('#ed').addEventListener('click',function(e){
 });
 function noteTxt(){return (edT.value?edT.value+'\n\n':'')+noteText({html:edB.innerHTML})}
 function shareNote(){var txt=noteTxt();if(navigator.share)navigator.share({title:edT.value||'Note',text:txt}).catch(function(){});else{try{navigator.clipboard.writeText(txt);toast('Copied to clipboard')}catch(e){toast('Sharing is not available here')}}}
-function delNote(){var n=cur,isNew=!!n._new;if(n.isTpl){delTpl(n);return}closeTop(function(){if(isNew)return;n.del=Date.now();save();render();toast('Moved to Recently deleted',function(){n.del=0;save();render()})})}
+function delNote(){var n=cur,isNew=!!n._new;if(n.isTpl){delTpl(n);return}if(isNew&&noteEmpty()){closeTop();return}sureDlg('This note will move to Recently deleted.',function(){delNote0(n,isNew)})}
+function delNote0(n,isNew){closeTop(function(){if(isNew)return;n.del=Date.now();save();render();toast('Moved to Recently deleted',function(){n.del=0;save();render()})})}
 function vMore(a){popMenu(a,tplItems().concat([{t:'Primary',dot:'var(--p1)',cls:'sp1',on:cur.pri===1,f:function(){cur.pri=cur.pri===1?0:1;edMeta();edChanged()}},{t:'Secondary',dot:'var(--p2)',cls:'sp2',on:cur.pri===2,f:function(){cur.pri=cur.pri===2?0:2;edMeta();edChanged()}},{t:'Move to section',f:function(){catPop($('[data-a=edcat]'),cur.cat,function(c){cur.cat=c;edMeta();edChanged()})}},{t:'Page background',f:function(){setMode(false);toggleStyle(true)}},{t:'Copy text',f:function(){try{navigator.clipboard.writeText(noteTxt()).then(function(){toast('Copied')},function(){toast('Could not copy')})}catch(e){toast('Could not copy')}}}]))}
 function catCol(id){var c=S.cats.filter(function(x){return x.id===id})[0];return c&&c.col||'#8e8e93'}
 function catPop(anchor,cur0,cb){
@@ -1473,7 +1476,7 @@ function noteMore(a){
  popMenu(a,tplItems().concat([{t:cur.star?'Unstar':'Star',f:function(){cur.star=cur.star?0:1;edMeta();edChanged()}},
   {t:'Share',f:function(){var txt=(edT.value?edT.value+'\n\n':'')+noteText({html:edB.innerHTML});if(navigator.share)navigator.share({title:edT.value||'Note',text:txt}).catch(function(){});else{try{navigator.clipboard.writeText(txt);toast('Copied to clipboard')}catch(e){toast('Sharing is not available here')}}}},
   {t:'Copy text',f:function(){var txt=(edT.value?edT.value+'\n\n':'')+noteText({html:edB.innerHTML});try{navigator.clipboard.writeText(txt).then(function(){toast('Copied')},function(){toast('Could not copy')})}catch(e){toast('Could not copy')}}},
-  {t:'Delete',dan:1,f:function(){var n=cur,isNew=!!n._new;if(n.isTpl){delTpl(n);return}closeTop(function(){if(isNew)return;n.del=Date.now();save();render();toast('Moved to Recently deleted',function(){n.del=0;save();render()})})}}]));
+  {t:'Delete',dan:1,f:function(){delNote()}}]));
 }
 
 /* ---------- cloud sync (Supabase, same account + table as Lifeloop) ---------- */
@@ -1911,7 +1914,7 @@ function workoutEditor(w){
 function exSheet(e,cb){var isNew=!e,o=e?Object.assign({},e):{id:'x_'+uid(),t:'',m:'',s:3,r:'8–12',rest:90,sw:''};
  sheet('<h3>'+(isNew?'New exercise':'Edit exercise')+'</h3><div class="sform"><input type="text" id="xT" placeholder="Exercise name" value="'+esc(o.t)+'"><div class="xgrid"><label>Sets<input type="text" inputmode="numeric" id="xS" value="'+esc(o.s)+'"></label><label>Reps<input type="text" id="xR" value="'+esc(o.r)+'" placeholder="8–12"></label><label>Rest (s)<input type="text" inputmode="numeric" id="xRe" value="'+esc(o.rest)+'"></label></div><input type="text" id="xM" placeholder="Muscle (optional)" value="'+esc(o.m||'')+'" style="margin-top:8px"><input type="text" id="xW" placeholder="Swap if busy (optional)" value="'+esc(o.sw||'')+'" style="margin-top:8px"><div class="sbtns">'+(isNew?'':'<button class="btn dan" data-k="del">Delete</button><span style="flex:1"></span>')+'<button class="btn" data-x>Cancel</button><button class="btn pri" data-k="save">Save</button></div></div>',function(sh){
   setTimeout(function(){if(isNew)$('#xT',sh).focus()},80);
-  sh.addEventListener('click',function(ev){var b=ev.target.closest('[data-k]');if(!b)return;if(b.dataset.k==='del'){closeTop(function(){cb(null)});return}
+  sh.addEventListener('click',function(ev){var b=ev.target.closest('[data-k]');if(!b)return;if(b.dataset.k==='del'){sureDlg('This exercise will be removed.',function(){closeTop(function(){cb(null)})});return}
    var t=$('#xT',sh).value.trim();if(!t){$('#xT',sh).focus();return}o.t=t;o.s=Math.max(1,Math.min(12,parseInt($('#xS',sh).value)||3));o.r=$('#xR',sh).value.trim()||'8–12';o.rest=Math.max(0,parseInt($('#xRe',sh).value)||90);o.m=$('#xM',sh).value.trim();o.sw=$('#xW',sh).value.trim();if(e)Object.assign(e,o);closeTop(function(){cb(isNew?o:e)})});
  });
 }
@@ -2003,7 +2006,7 @@ function foodSheet(item,meal){
     else if(qk==='yest'){closeTop(function(){addItems(yIts,o.meal);toast('Copied '+yIts.length+(yIts.length===1?' item':' items')+' from yesterday')})}
     return}
    if((b=e.target.closest('[data-meal]'))){o.meal=b.dataset.meal;$$('#fMs .chip',sh).forEach(function(c){c.classList.toggle('on',c===b)});return}
-   if((b=e.target.closest('[data-k]'))){if(b.dataset.k==='del'){closeTop(function(){var d=fDay(foodDay,true);d.items=d.items.filter(function(x){return x.id!==o.id});save();render()});return}
+   if((b=e.target.closest('[data-k]'))){if(b.dataset.k==='del'){sureDlg('This food will be removed.',function(){closeTop(function(){var d=fDay(foodDay,true);d.items=d.items.filter(function(x){return x.id!==o.id});save();render()})});return}
     var n=$('#fN',sh).value.trim();if(!n){$('#fN',sh).focus();return}o.name=n;o.kcal=$('#fK',sh).value.trim();o.p=$('#fP',sh).value.trim();o.c=$('#fC',sh).value.trim();o.f=$('#fF',sh).value.trim();
     var d=fDay(foodDay,true);if(isNew)d.items.push(o);else{var ix=d.items.map(function(x){return x.id}).indexOf(o.id);if(ix>-1)d.items[ix]=o}
     F().recent=[{name:o.name,kcal:o.kcal,p:o.p,c:o.c,f:o.f,per:o.per||null,g:o.g||''}].concat(F().recent.filter(function(r){return r.name.toLowerCase()!==o.name.toLowerCase()})).slice(0,30);
