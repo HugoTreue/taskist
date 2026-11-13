@@ -1,0 +1,2126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Reader"><meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>Reader</title>
+<meta name="description" content="A natural-voice PDF reader that runs entirely in your browser.">
+<style>
+[hidden] { display: none !important; }
+:root {
+  --bg: #f7f8fa; --panel: #ffffff; --ink: #1f2430; --muted: #7a8193; --line: #e6e8ee; --soft: #f1f3f7;
+  --blue: #1a6fe8; --blue-soft: #e8f0fd; --hl: #e3dbfb; --hl-word: #b9a6f5; --shadow: 0 6px 28px rgba(20, 30, 60, .12);
+  --font: "Poppins", "Segoe UI", -apple-system, system-ui, sans-serif; --read: 18px; --lh: 1.65; --ls: 0;
+}
+body.dark { --bg: #14161b; --panel: #1d2027; --ink: #e8eaf0; --muted: #8d93a3; --line: #2c3039; --soft: #252932;
+  --blue-soft: #1d2b44; --hl: #3b3264; --hl-word: #6550b8; --shadow: 0 6px 28px rgba(0,0,0,.45); }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { display: flex; background: var(--bg); color: var(--ink); font: 14px var(--font); overflow: hidden; }
+button { font: inherit; color: inherit; cursor: pointer; }
+.ico { border: 0; background: none; width: 34px; height: 34px; border-radius: 8px; font-size: 17px; color: var(--muted); display: inline-grid; place-items: center; }
+.ico:hover { background: var(--soft); color: var(--ink); }
+
+/* sidebar */
+#side { width: 210px; flex: none; background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column; padding: 10px; gap: 4px; transition: width .2s; }
+.logo { display: flex; align-items: center; gap: 6px; padding: 2px 4px 10px; }
+.logo .mark { width: 24px; height: 24px; border-radius: 6px; background: var(--blue); color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 13px; }
+.logo .word { font-weight: 600; color: var(--blue); font-size: 15px; flex: 1; }
+.nav { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; background: none; padding: 9px 10px; border-radius: 6px; text-align: left; }
+.nav i { font-style: normal; width: 18px; text-align: center; color: var(--muted); }
+.nav:hover { background: var(--soft); }
+.nav.on { background: var(--blue); color: #fff; } .nav.on i { color: #fff; }
+a.nav { color: var(--ink); text-decoration: none; } .nav.tkback { margin-top: auto; } .nav.tkback + #stats { margin-top: 0; }
+.more-label { font-size: 11px; color: var(--muted); padding: 14px 10px 2px; }
+#stats { margin-top: auto; font-size: 11.5px; color: var(--muted); line-height: 1.6; padding: 10px; border-top: 1px solid var(--line); }
+body.collapsed #side { width: 58px; } body.collapsed #side span, body.collapsed .more-label, body.collapsed #stats, body.collapsed .logo .word { display: none; }
+body.collapsed #collapse { transform: rotate(180deg); }
+
+/* top bar */
+#main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+#top { position: relative; height: 58px; flex: none; display: flex; align-items: center; justify-content: center; background: var(--panel); border-bottom: 1px solid var(--line); }
+#top .center { display: flex; align-items: center; gap: 14px; }
+#top .right { position: absolute; right: 14px; display: flex; gap: 2px; }
+.voice-btn { width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--blue); background: var(--blue-soft); color: var(--blue); font-weight: 600; font-size: 16px; box-shadow: 0 0 0 3px var(--blue-soft); }
+.voice-btn.blend { background: linear-gradient(135deg, var(--blue-soft) 50%, #efe7ff 50%); }
+.play { width: 36px; height: 36px; border-radius: 50%; border: 0; background: var(--blue); color: #fff; font-size: 14px; display: grid; place-items: center; }
+.play:hover { filter: brightness(1.1); }
+.speed { border: 0; background: none; color: var(--muted); font-size: 14px; padding: 6px 8px; border-radius: 6px; min-width: 54px; }
+.speed:hover { background: var(--soft); color: var(--ink); }
+#progress { position: absolute; left: 0; right: 0; bottom: -1px; height: 3px; background: var(--line); cursor: pointer; }
+#bar { height: 100%; width: 0; background: var(--blue); transition: width .3s; }
+#progress span { position: absolute; top: 6px; font-size: 10.5px; color: var(--muted); }
+#tNow { left: 10px; } #tAll { right: 10px; }
+
+/* views */
+.view { flex: 1; overflow-y: auto; padding: 34px 24px 80px; }
+.card { position: relative; max-width: 920px; margin: 0 auto; background: var(--panel); border-radius: 10px; box-shadow: 0 1px 12px rgba(20,30,60,.06); padding: 28px 42px; }
+.card .close { position: absolute; top: 8px; right: 8px; }
+#newText { width: 100%; min-height: 50vh; border: 0; outline: none; resize: vertical; background: none; color: var(--ink); font: var(--read)/var(--lh) var(--font); }
+.chips { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 14px; }
+.chip { border: 1px solid var(--line); background: var(--panel); border-radius: 6px; padding: 6px 12px; font-size: 12.5px; }
+.chip:hover { border-color: var(--blue); color: var(--blue); }
+#busy { text-align: center; color: var(--blue); margin-top: 10px; font-size: 13px; }
+
+#text { font: var(--read)/var(--lh) var(--font); letter-spacing: var(--ls); word-spacing: calc(var(--ls) * 3); }
+#text .blk { margin: 0 0 .9em; }
+#text h2.blk { font-size: 1.2em; margin-top: 1.2em; }
+#text .footnote, #text .caption { font-size: .82em; color: var(--muted); }
+#text .pg { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin: 1.8em 0 .8em; display: flex; gap: 10px; align-items: center; }
+#text .pg::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.s { cursor: pointer; border-radius: 3px; }
+.s:hover { background: var(--soft); }
+.s.cur { background: var(--hl); }
+.w { position: relative; z-index: 1; }
+body.dys #text, body.dys #newText { font-family: "OpenDyslexic", "Comic Sans MS", "Verdana", sans-serif; }
+
+#pages { display: flex; flex-direction: column; align-items: center; gap: 22px; }
+.page { position: relative; box-shadow: var(--shadow); background: #fff; }
+.page img { display: block; width: 100%; }
+.page .hlr { position: absolute; background: #8f6df255; mix-blend-mode: multiply; border-radius: 2px; pointer-events: none; }
+
+/* library */
+.libhead { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; max-width: 1100px; margin: -14px auto 14px; }
+.libhead h2 { font-weight: 500; font-size: 20px; margin: 0; } .libhead sup { color: var(--muted); font-size: 11px; }
+.link { border: 0; background: none; color: var(--blue); justify-self: start; }
+#docs { list-style: none; margin: 0 auto; padding: 0; max-width: 1100px; }
+#docs li { display: flex; align-items: center; gap: 14px; padding: 12px 10px; border-radius: 8px; cursor: pointer; position: relative; }
+#docs li:hover { background: var(--panel); box-shadow: 0 1px 8px rgba(20,30,60,.06); }
+.dicon { width: 38px; height: 44px; border-radius: 4px; display: grid; place-items: center; color: #fff; font-size: 10px; font-weight: 700; flex: none; }
+.dicon.pdf { background: linear-gradient(160deg, #d9483b, #a3271c); } .dicon.txt { background: linear-gradient(160deg, #4f9bf0, #1a6fe8); }
+#docs .t { font-size: 13.5px; } #docs small { display: block; color: var(--muted); font-size: 11.5px; margin-top: 3px; }
+#docs .kebab { margin-left: auto; }
+#docs .menu { position: absolute; right: 10px; top: 44px; background: var(--panel); box-shadow: var(--shadow); border-radius: 8px; z-index: 5; padding: 4px; }
+#docs .menu button { display: block; border: 0; background: none; padding: 8px 16px; width: 100%; text-align: left; color: #d23b3b; }
+.emptylib { text-align: center; color: var(--muted); margin-top: 60px; }
+
+/* popovers */
+.pop { position: fixed; z-index: 20; background: var(--panel); border-radius: 12px; box-shadow: var(--shadow); border: 1px solid var(--line); width: 330px; padding: 12px 14px 14px; }
+.pophead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; } .pophead.center { justify-content: center; position: relative; }
+.pophead.center .x { position: absolute; right: -6px; }
+.tabs { display: flex; align-items: flex-start; border-bottom: 1px solid var(--line); margin: -4px -14px 12px; padding: 0 6px 6px; }
+.tabs button:not(.x) { flex: 1; border: 0; background: none; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; color: var(--muted); padding: 4px 0; }
+.tabs button i { font-style: normal; font-size: 18px; }
+.tabs button.on { color: var(--blue); }
+.tabs .x { width: 26px; height: 26px; font-size: 13px; }
+.speedbox { display: grid; grid-template-columns: 1fr 60px 1.2fr; align-items: center; height: 250px; }
+.readout { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.readout b { font-size: 24px; font-weight: 500; } .readout small { color: var(--muted); }
+.pm { border: 0; background: none; font-size: 20px; color: var(--muted); width: 30px; height: 30px; border-radius: 50%; } .pm:hover { background: var(--soft); }
+.vslider { height: 240px; display: grid; place-items: center; }
+#spRange { writing-mode: vertical-lr; direction: rtl; height: 230px; width: 46px; appearance: none; -webkit-appearance: none; background: transparent; }
+#spRange::-webkit-slider-runnable-track { width: 46px; border-radius: 10px; border: 1px solid var(--line); background: linear-gradient(to top, var(--blue) var(--fill, 20%), var(--soft) var(--fill, 20%)); }
+#spRange::-webkit-slider-thumb { -webkit-appearance: none; width: 46px; height: 8px; border-radius: 4px; background: #fff; border: 2px solid var(--blue); }
+#spRange::-moz-range-track { width: 46px; border-radius: 10px; background: var(--soft); border: 1px solid var(--line); }
+#spRange::-moz-range-progress { width: 46px; border-radius: 10px; background: var(--blue); }
+.marks { position: relative; height: 230px; font-size: 13px; padding-left: 8px; }
+.marks span { position: absolute; left: 8px; transform: translateY(50%); white-space: nowrap; }
+.marks small { color: var(--muted); font-size: 10.5px; }
+.presets { display: flex; gap: 6px; justify-content: space-between; margin-top: 10px; }
+.presets button { flex: 1; border: 1px solid var(--line); background: var(--panel); border-radius: 6px; padding: 6px 0; font-size: 12px; }
+.presets button.on, .presets button:hover { border-color: var(--blue); color: var(--blue); }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 0; }
+.row small { display: block; color: var(--muted); font-size: 11px; font-weight: 400; margin-top: 2px; }
+.field { padding: 6px 0 10px; } .field label { display: block; font-weight: 600; font-size: 12.5px; margin-bottom: 6px; }
+select { font: inherit; font-size: 13px; padding: 7px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--ink); min-width: 150px; }
+input[type=range]:not(#spRange) { width: 100%; accent-color: var(--blue); }
+.tog { appearance: none; -webkit-appearance: none; width: 34px; height: 20px; border-radius: 10px; background: var(--line); position: relative; cursor: pointer; flex: none; transition: .15s; }
+.tog::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: .15s; box-shadow: 0 1px 2px #0003; }
+.tog:checked { background: var(--blue); } .tog:checked::after { left: 16px; }
+.btn { border: 0; background: var(--blue); color: #fff; border-radius: 6px; padding: 7px 14px; font-size: 12.5px; }
+.btn.ghost { background: var(--soft); color: var(--ink); }
+
+#popVoice { width: 380px; max-height: calc(100vh - 80px); display: flex; flex-direction: column; }
+.filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.filters button { border: 1px solid var(--line); background: var(--panel); border-radius: 14px; padding: 4px 11px; font-size: 12px; }
+.filters button.on { background: var(--blue); border-color: var(--blue); color: #fff; }
+#voiceList { list-style: none; margin: 0 -6px; padding: 0; overflow-y: auto; flex: 1; min-height: 120px; }
+#voiceList li { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 8px; cursor: pointer; }
+#voiceList li:hover { background: var(--soft); }
+#voiceList li.sel { background: var(--blue-soft); }
+.av { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-weight: 600; color: #fff; flex: none; }
+.vmeta { flex: 1; } .vmeta b { font-weight: 500; } .vmeta small { display: block; color: var(--muted); font-size: 11px; }
+.badge { font-size: 10px; background: #fff3d6; color: #9a6a00; border-radius: 4px; padding: 1px 5px; margin-left: 6px; }
+body.dark .badge { background: #4a3a10; color: #f3cf6b; }
+.pv { border: 1px solid var(--line); background: var(--panel); width: 30px; height: 30px; border-radius: 50%; font-size: 11px; }
+.pv:hover, .pv.on { border-color: var(--blue); color: var(--blue); }
+.check { color: var(--blue); width: 16px; }
+.blend { border-top: 1px solid var(--line); margin-top: 8px; padding-top: 4px; }
+.mixrow { display: grid; grid-template-columns: 70px 1fr 70px; align-items: center; gap: 8px; font-size: 12px; }
+.mixrow span:last-child { text-align: right; }
+
+.grid { width: 290px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px 8px; padding: 30px 14px 16px; }
+.grid .x { position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; font-size: 13px; }
+.tile { border: 0; background: none; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 11.5px; color: var(--muted); }
+.tile i { font-style: normal; width: 46px; height: 46px; border-radius: 10px; background: var(--soft); display: grid; place-items: center; font-size: 18px; color: var(--ink); }
+.tile:hover i, .tile.on i { background: var(--blue-soft); color: var(--blue); }
+.stepper { display: flex; align-items: center; gap: 10px; } .stepper button { border: 0; background: none; font-size: 18px; width: 26px; color: var(--muted); }
+.timers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.timers button { border: 1px solid var(--line); background: var(--panel); border-radius: 6px; padding: 8px 0; }
+.timers button.on { border-color: var(--blue); color: var(--blue); }
+#timerLeft { display: block; text-align: center; margin-top: 10px; color: var(--muted); }
+
+.modal { position: fixed; inset: 0; background: #0006; z-index: 30; display: grid; place-items: center; }
+.mcard { background: var(--panel); border-radius: 12px; width: min(560px, 92vw); padding: 18px 20px; box-shadow: var(--shadow); max-height: 85vh; overflow-y: auto; }
+.hint { color: var(--muted); font-size: 12.5px; margin-top: 0; }
+.mcard table { width: 100%; border-collapse: collapse; margin: 6px 0 10px; }
+.mcard th { text-align: left; font-size: 11.5px; color: var(--muted); font-weight: 500; padding: 4px; }
+.mcard td { padding: 4px; } .mcard td input { width: 100%; font: inherit; padding: 7px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--ink); }
+
+#readsel { position: fixed; z-index: 15; background: var(--ink); color: var(--panel); border: 0; border-radius: 18px; padding: 7px 13px; font-size: 12.5px; box-shadow: var(--shadow); }
+#toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--panel); padding: 9px 16px; border-radius: 8px; font-size: 13px; z-index: 40; }
+
+
+/* ================= motion & polish ================= */
+:root { --ease: cubic-bezier(.2, .8, .2, 1); }
+body, #side, #top, .card, .pop, .mcard, .s, select, .chip, .tile i, #docs li { transition: background-color .3s ease, color .3s ease, border-color .3s ease, box-shadow .25s ease; }
+svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; display: block; }
+svg.fill { fill: currentColor; stroke: none; }
+.nav i svg { width: 18px; height: 18px; } .ico svg { width: 18px; height: 18px; }
+#collapse svg { width: 15px; height: 15px; transition: transform .3s var(--ease); }
+body.collapsed #collapse svg { transform: rotate(180deg); } body.collapsed #collapse { transform: none; }
+button { -webkit-tap-highlight-color: transparent; }
+.ico, .nav, .chip, .btn, .pm, .pv, .presets button, .filters button, .timers button, .tile, .speed { transition: background-color .15s ease, color .15s ease, border-color .15s ease, transform .12s var(--ease); }
+.ico:active, .chip:active, .btn:active, .pv:active, .presets button:active, .filters button:active, .timers button:active, .tile:active, .speed:active { transform: scale(.92); }
+
+/* play button: morphing icon + loading ring */
+.play { position: relative; width: 44px; height: 44px; box-shadow: 0 4px 14px rgba(26, 111, 232, .35); transition: transform .15s var(--ease), box-shadow .2s ease, filter .2s; }
+.play:hover { transform: scale(1.06); box-shadow: 0 6px 18px rgba(26, 111, 232, .45); }
+.play:active { transform: scale(.94); }
+.play svg { position: absolute; width: 20px; height: 20px; transition: opacity .2s ease, transform .25s var(--ease); }
+.play .i-pause { opacity: 0; transform: scale(.5) rotate(-90deg); }
+.play.playing .i-play { opacity: 0; transform: scale(.5) rotate(90deg); }
+.play.playing .i-pause { opacity: 1; transform: none; }
+.play .ring { position: absolute; inset: -4px; border-radius: 50%; border: 2.5px solid transparent; border-top-color: var(--blue); opacity: 0; transition: opacity .2s; }
+.play.loading .ring { opacity: 1; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.voice-btn { transition: transform .15s var(--ease), box-shadow .25s ease; }
+.voice-btn:hover { transform: scale(1.06); box-shadow: 0 0 0 5px var(--blue-soft); }
+.voice-btn.swap { animation: pop .35s var(--ease); }
+@keyframes pop { 40% { transform: scale(1.18); } }
+
+/* progress */
+#bar { transition: none; border-radius: 0 2px 2px 0; }
+#progress { transition: height .15s ease; } #progress:hover { height: 5px; }
+
+/* views + library */
+.view:not([hidden]) { animation: viewIn .32s var(--ease); }
+@keyframes viewIn { from { opacity: 0; transform: translateY(10px); } }
+#docs li { animation: rowIn .35s var(--ease) backwards; animation-delay: calc(var(--i, 0) * 35ms); }
+@keyframes rowIn { from { opacity: 0; transform: translateY(8px); } }
+#docs li:hover { transform: translateX(2px); } #docs li { transition: transform .2s var(--ease), background-color .2s, box-shadow .2s; }
+
+/* reading highlight: sentence fades, a pill glides from word to word */
+.s { transition: background-color .35s ease, color .35s ease; }
+.card.doc { position: relative; }
+#pill { position: absolute; left: 0; top: 0; width: 0; height: 0; border-radius: 4px; background: var(--hl-word); opacity: 0; pointer-events: none; z-index: 0;
+  transition: transform .16s var(--ease), width .16s var(--ease), height .16s var(--ease), opacity .25s ease; }
+#pill.on { opacity: 1; }
+#pill.jump { transition: opacity .25s ease; }
+
+/* popovers, menus, modal, toast */
+.pop:not([hidden]) { animation: popIn .2s var(--ease); transform-origin: top center; }
+.pop.closing { animation: popOut .14s ease-in forwards; }
+@keyframes popIn { from { opacity: 0; transform: translateY(-8px) scale(.97); } }
+@keyframes popOut { to { opacity: 0; transform: translateY(-6px) scale(.98); } }
+.tab:not([hidden]) { animation: fadeIn .2s ease; } @keyframes fadeIn { from { opacity: 0; } }
+.tabs button:not(.x) { transition: color .2s ease; position: relative; }
+.tabs button.on::after { content: ""; position: absolute; left: 22%; right: 22%; bottom: -7px; height: 2px; border-radius: 2px; background: var(--blue); animation: grow .25s var(--ease); }
+@keyframes grow { from { transform: scaleX(0); } }
+#voiceList li { transition: background-color .15s ease, transform .15s var(--ease); } #voiceList li:hover { transform: translateX(2px); }
+#voiceList li .check { transition: transform .25s var(--ease); } #voiceList li.sel .check { animation: pop .3s var(--ease); }
+.tog, .tog::after { transition: background-color .2s ease, left .22s var(--ease); }
+.modal:not([hidden]) { animation: fadeIn .2s ease; } .modal:not([hidden]) .mcard { animation: popIn .25s var(--ease); }
+.modal.closing { animation: fadeOut .15s ease forwards; } @keyframes fadeOut { to { opacity: 0; } }
+#docs .menu { animation: popIn .16s var(--ease); }
+#toast { transition: opacity .25s ease, transform .3s var(--ease); }
+#toast:not([hidden]) { animation: toastIn .3s var(--ease); } @keyframes toastIn { from { opacity: 0; transform: translate(-50%, 12px); } }
+#readsel:not([hidden]) { animation: popIn .18s var(--ease); }
+#spRange { transition: none; }
+
+/* voice download progress */
+.dl { height: 3px; background: var(--line); border-radius: 2px; margin: 6px 0 2px; overflow: hidden; }
+.dl i { display: block; height: 100%; background: var(--blue); border-radius: 2px; transition: width .4s ease; }
+
+/* scrollbars */
+.view::-webkit-scrollbar, #voiceList::-webkit-scrollbar { width: 10px; }
+.view::-webkit-scrollbar-thumb, #voiceList::-webkit-scrollbar-thumb { background: var(--line); border-radius: 10px; border: 3px solid transparent; background-clip: content-box; }
+.view::-webkit-scrollbar-thumb:hover { background-color: var(--muted); }
+
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; } .chip svg { width: 15px; height: 15px; }
+.chip.primary { background: var(--blue); border-color: var(--blue); color: #fff; } .chip.primary:hover { color: #fff; filter: brightness(1.08); }
+.badge.enh { background: #e8f0fd; color: #1a6fe8; } body.dark .badge.enh { background: #1d2b44; color: #8db8ff; }
+
+/* ================= wider layout (matches the reference proportions) ================= */
+#side { width: 268px; padding: 16px 14px; gap: 6px; }
+.logo { padding: 2px 6px 16px; } .logo .mark { width: 28px; height: 28px; font-size: 15px; border-radius: 7px; } .logo .word { font-size: 17px; }
+.nav { padding: 12px 14px; font-size: 15px; gap: 12px; border-radius: 8px; } .nav i svg { width: 20px; height: 20px; }
+.more-label { font-size: 12px; padding: 18px 14px 4px; }
+#stats { font-size: 12.5px; padding: 12px 10px; }
+body.collapsed #side { width: 66px; }
+#top { height: 66px; } #top .center { gap: 26px; } #top .right { right: 18px; gap: 6px; }
+.voice-btn { width: 46px; height: 46px; font-size: 18px; }
+.play { width: 48px; height: 48px; } .play svg { width: 22px; height: 22px; }
+.ico { width: 40px; height: 40px; } .ico svg { width: 21px; height: 21px; }
+.speed { font-size: 15.5px; min-width: 64px; padding: 8px 10px; }
+#progress span { font-size: 11.5px; top: 8px; }
+.view { padding: 44px 40px 90px; }
+.card { max-width: 1040px; padding: 36px 52px; border-radius: 12px; }
+#newText { min-height: 54vh; }
+.chips { gap: 10px; margin-top: 18px; } .chip { padding: 10px 18px; font-size: 13.5px; border-radius: 8px; }
+.libhead, #docs { max-width: 1180px; } .libhead h2 { font-size: 22px; } #docs li { padding: 14px 14px; gap: 18px; } .dicon { width: 42px; height: 50px; } #docs .t { font-size: 15px; }
+.pop { width: 400px; padding: 16px 18px 18px; border-radius: 14px; }
+#popSet { width: 420px; } .tabs { margin: -6px -18px 14px; padding: 0 10px 8px; } .tabs button:not(.x) { font-size: 12px; gap: 5px; } .tabs button i { font-size: 21px; }
+.speedbox { grid-template-columns: 1fr 76px 1.25fr; height: 320px; } .readout b { font-size: 30px; } .readout small { font-size: 13px; }
+.vslider { height: 300px; } #spRange { height: 290px; width: 64px; }
+#spRange::-webkit-slider-runnable-track { width: 64px; border-radius: 14px; } #spRange::-webkit-slider-thumb { width: 64px; height: 10px; border-radius: 5px; }
+#spRange::-moz-range-track, #spRange::-moz-range-progress { width: 64px; border-radius: 14px; }
+.marks { height: 290px; font-size: 14px; } .marks small { font-size: 11.5px; }
+.presets { gap: 8px; margin-top: 14px; } .presets button { padding: 9px 0; font-size: 13px; border-radius: 8px; }
+.field label { font-size: 13.5px; } select { padding: 9px 10px; font-size: 14px; } .row { padding: 10px 0; }
+#popMore { width: 360px; gap: 18px 10px; padding: 34px 18px 20px; } .tile { font-size: 12.5px; } .tile i { width: 54px; height: 54px; font-size: 20px; border-radius: 12px; }
+#popFont, #popTimer { width: 360px; }
+.mcard { width: min(640px, 92vw); padding: 22px 26px; }
+
+/* ================= voice panel: polished selection ================= */
+#popVoice { width: 480px; padding: 18px 16px 16px; }
+.vtitle { display: flex; align-items: baseline; gap: 10px; } .vtitle b { font-size: 17px; } .vtitle small { color: var(--muted); font-size: 12.5px; }
+.filters { position: relative; display: flex; gap: 6px; margin: 4px 0 12px; padding: 4px; background: var(--soft); border-radius: 22px; }
+.filters button { position: relative; z-index: 1; flex: 1; border: 0; background: transparent; border-radius: 18px; padding: 7px 0; font-size: 13px; color: var(--muted); transition: color .3s ease; }
+.filters button.on { background: transparent; color: #fff; }
+.filters button:not(.on):hover { color: var(--ink); }
+.fpill { position: absolute; top: 4px; bottom: 4px; left: 0; width: 0; border-radius: 18px; background: var(--blue); box-shadow: 0 3px 10px rgba(26,111,232,.35);
+  transition: transform .45s cubic-bezier(.34, 1.4, .64, 1), width .45s cubic-bezier(.34, 1.4, .64, 1); }
+.fpill.instant { transition: none; }
+#voiceList { position: relative; margin: 0 -4px; padding: 2px 4px; max-height: min(460px, calc(100vh - 330px)); scroll-behavior: smooth; }
+#vSel { position: absolute; left: 4px; right: 4px; top: 0; height: 0; border-radius: 12px; pointer-events: none; z-index: 0;
+  background: color-mix(in srgb, var(--vc, var(--blue)) 11%, var(--panel)); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--vc, var(--blue)) 40%, transparent), 0 4px 14px color-mix(in srgb, var(--vc, var(--blue)) 16%, transparent);
+  transition: transform .5s cubic-bezier(.34, 1.36, .64, 1), height .3s ease, background-color .45s ease, box-shadow .45s ease, opacity .25s ease; }
+#vSel.instant { transition: none; }
+#voiceList li { position: relative; z-index: 1; overflow: hidden; gap: 14px; padding: 10px 12px; border-radius: 12px; margin: 2px 0; background: transparent !important; transform: none !important;
+  transition: transform .25s var(--ease); }
+#voiceList li::before { content: ""; position: absolute; inset: 0; border-radius: 12px; background: var(--soft); opacity: 0; transition: opacity .2s ease; z-index: -1; }
+#voiceList li:hover::before { opacity: 1; } #voiceList li.sel::before { opacity: 0; }
+#voiceList li.in { animation: vIn .45s var(--ease) backwards; animation-delay: calc(var(--i) * 24ms); }
+@keyframes vIn { from { opacity: 0; transform: translateY(8px) scale(.98); } }
+.av { width: 40px; height: 40px; font-size: 16px; box-shadow: 0 2px 8px rgba(0,0,0,.12); transition: transform .35s cubic-bezier(.34, 1.56, .64, 1), box-shadow .3s ease; }
+#voiceList li:hover .av { transform: scale(1.08) rotate(-4deg); }
+#voiceList li.picked .av { animation: avPop .6s cubic-bezier(.34, 1.56, .64, 1); }
+@keyframes avPop { 0% { transform: scale(1); } 25% { transform: scale(.82) rotate(6deg); } 60% { transform: scale(1.18) rotate(-4deg); } 100% { transform: scale(1); } }
+#voiceList li.sel .av { box-shadow: 0 0 0 3px var(--panel), 0 0 0 5px var(--vc), 0 4px 12px rgba(0,0,0,.18); }
+.vmeta b { font-size: 15px; transition: color .3s ease; } #voiceList li.sel .vmeta b { color: var(--vc); font-weight: 600; }
+.vmeta small { font-size: 12px; }
+.check { width: 22px; height: 22px; display: grid; place-items: center; }
+.check .ck { width: 20px; height: 20px; stroke: var(--vc, var(--blue)); stroke-width: 2.6; }
+.check .ck path { stroke-dasharray: 24; stroke-dashoffset: 24; transition: stroke-dashoffset .4s cubic-bezier(.65, 0, .35, 1) .12s; }
+#voiceList li.sel .check .ck path { stroke-dashoffset: 0; }
+.ripple { position: absolute; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; pointer-events: none; z-index: -1;
+  background: var(--vc, var(--blue)); opacity: .28; animation: ripple .7s cubic-bezier(.2, .8, .2, 1) forwards; }
+@keyframes ripple { to { transform: scale(70); opacity: 0; } }
+.pv { width: 34px; height: 34px; display: grid; place-items: center; position: relative; color: var(--ink); transition: transform .2s cubic-bezier(.34, 1.56, .64, 1), border-color .2s, background-color .2s, color .2s; }
+.pv svg { width: 13px; height: 13px; margin-left: 2px; }
+.pv:hover { transform: scale(1.12); border-color: var(--vc, var(--blue)); color: var(--vc, var(--blue)); }
+.pv.on { border-color: var(--vc, var(--blue)); background: color-mix(in srgb, var(--vc, var(--blue)) 12%, var(--panel)); }
+.pv.loading::after { content: ""; position: absolute; inset: 7px; border-radius: 50%; border: 2px solid var(--line); border-top-color: var(--vc, var(--blue)); animation: spin .7s linear infinite; }
+.eq { display: flex; gap: 2px; align-items: flex-end; height: 13px; }
+.eq i { width: 3px; height: 4px; border-radius: 2px; background: var(--vc, var(--blue)); animation: eq .9s ease-in-out infinite; }
+.eq i:nth-child(2) { animation-delay: -.35s; } .eq i:nth-child(3) { animation-delay: -.6s; } .eq i:nth-child(4) { animation-delay: -.15s; }
+@keyframes eq { 0%, 100% { height: 3px; } 50% { height: 13px; } }
+#voiceList li.previewing .av { animation: halo 1.3s ease-out infinite; }
+@keyframes halo { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--vc) 55%, transparent); } 100% { box-shadow: 0 0 0 12px transparent; } }
+.badge { font-size: 10.5px; padding: 2px 7px; border-radius: 5px; font-weight: 600; }
+
+/* blend section */
+.blend { margin-top: 10px; padding-top: 6px; }
+#blendBox { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows .45s var(--ease), opacity .35s ease; }
+#blendBox.open { grid-template-rows: 1fr; opacity: 1; } #blendBox > .inner { overflow: hidden; }
+.mixrow { grid-template-columns: 30px 64px 1fr 64px 30px; gap: 8px; padding: 6px 0; }
+.mixav { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 12px; font-weight: 600; transition: transform .3s cubic-bezier(.34, 1.56, .64, 1), background-color .4s; }
+#mixB { text-align: right; }
+#blendMix { -webkit-appearance: none; appearance: none; height: 8px; border-radius: 4px; background: linear-gradient(90deg, var(--ca, var(--blue)) 0%, var(--ca, var(--blue)) calc(100% - var(--m, 30%)), var(--cb, #7a4fe0) calc(100% - var(--m, 30%)), var(--cb, #7a4fe0) 100%); }
+#blendMix::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #fff; border: 2px solid var(--ink); box-shadow: 0 2px 6px rgba(0,0,0,.2); transition: transform .2s; }
+#blendMix::-webkit-slider-thumb:hover { transform: scale(1.15); }
+#blendPreview { display: inline-flex; align-items: center; gap: 6px; } #blendPreview svg { width: 12px; height: 12px; }
+#blendPreview.on { animation: halo 1.3s ease-out infinite; --vc: var(--blue); } #blendPreview.loading { opacity: .7; }
+
+/* top-bar voice button reacts to a new voice */
+.voice-btn { position: relative; border-color: var(--vc, var(--blue)); color: var(--vc, var(--blue)); background: color-mix(in srgb, var(--vc, var(--blue)) 12%, var(--panel));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--vc, var(--blue)) 14%, transparent); transition: transform .2s var(--ease), color .45s ease, border-color .45s ease, background-color .45s ease, box-shadow .45s ease; perspective: 200px; }
+.voice-btn.blend { background: linear-gradient(135deg, color-mix(in srgb, var(--vc) 14%, var(--panel)) 50%, color-mix(in srgb, #1a6fe8 14%, var(--panel)) 50%); }
+.voice-btn #voiceInitial { display: inline-block; }
+.voice-btn.flip #voiceInitial { animation: flipIn .6s cubic-bezier(.34, 1.56, .64, 1); }
+@keyframes flipIn { 0% { transform: rotateY(90deg) scale(.5); opacity: 0; } 100% { transform: none; opacity: 1; } }
+.voice-btn.flip::after { content: ""; position: absolute; inset: -3px; border-radius: 50%; border: 2px solid var(--vc); animation: burst .7s ease-out forwards; pointer-events: none; }
+@keyframes burst { to { transform: scale(1.7); opacity: 0; } }
+.voice-btn.swap { animation: none; }
+.tabs button i { display: grid; place-items: center; height: 24px; } .tabs button i svg { width: 22px; height: 22px; stroke-width: 1.7; }
+.tabs button:not(.x):hover { color: var(--ink); } .tabs button.on:hover { color: var(--blue); }
+.pm { font-size: 24px; width: 38px; height: 38px; }
+.voice-btn { flex: none; align-self: center; margin: 0; vertical-align: middle; }
+
+/* ================= figures ================= */
+.fig { position: relative; margin: 1.4em auto 1.6em; max-width: 100%; border-radius: 6px; overflow: hidden; cursor: zoom-in;
+  background: linear-gradient(100deg, var(--soft) 30%, var(--panel) 50%, var(--soft) 70%) 0 0 / 300% 100%; animation: shimmer 1.4s linear infinite;
+  box-shadow: 0 1px 2px rgba(0,0,0,.06), 0 6px 22px rgba(20,30,60,.08); transition: transform .3s var(--ease), box-shadow .3s ease; }
+.fig.ready { animation: none; background: #fff; }
+.fig canvas { display: block; width: 100%; height: 100%; opacity: 0; transition: opacity .45s ease; }
+.fig.ready canvas { opacity: 1; }
+.fig:hover { transform: translateY(-2px); box-shadow: 0 2px 4px rgba(0,0,0,.06), 0 12px 32px rgba(20,30,60,.14); }
+.fig .zoom { position: absolute; right: 8px; top: 8px; width: 32px; height: 32px; border: 0; border-radius: 8px; background: rgba(20,24,32,.55); color: #fff;
+  display: grid; place-items: center; opacity: 0; transform: scale(.85); transition: opacity .2s ease, transform .2s var(--ease); backdrop-filter: blur(4px); }
+.fig .zoom svg { width: 16px; height: 16px; } .fig:hover .zoom { opacity: 1; transform: none; }
+.fig.failed { display: none; }
+@keyframes shimmer { to { background-position: -300% 0; } }
+body.dark .fig.ready { background: #fff; } body.dark .fig { box-shadow: 0 6px 22px rgba(0,0,0,.4); }
+.lightbox { position: fixed; inset: 0; z-index: 50; background: rgba(12,14,20,.82); display: grid; place-items: center; cursor: zoom-out; animation: fadeIn .22s ease; backdrop-filter: blur(3px); }
+.lightbox canvas { max-width: 92vw; max-height: 88vh; border-radius: 8px; background: #fff; box-shadow: 0 20px 60px rgba(0,0,0,.5); opacity: 0; transform: scale(.94); transition: opacity .3s ease, transform .35s var(--ease); }
+.lightbox.ready canvas { opacity: 1; transform: none; }
+.lightbox .x { position: absolute; top: 16px; right: 18px; color: #fff; } .lightbox .x:hover { background: rgba(255,255,255,.12); color: #fff; }
+.lightbox.closing { animation: fadeOut .2s ease forwards; } .lightbox.closing canvas { transform: scale(.96); }
+
+/* ================= phone layout ================= */
+.grip { display: none; }
+@media (hover: none) {
+  .fig .zoom { opacity: 1; transform: none; }
+  .fig:hover, #docs li:hover, #voiceList li:hover .av, .play:hover, .voice-btn:hover, .pv:hover { transform: none; }
+  #voiceList li:hover::before { opacity: 0; }
+}
+@media (max-width: 760px) {
+  html, body { height: 100%; }
+  body { flex-direction: column; height: 100dvh; overscroll-behavior: none; }
+  /* bottom tab bar */
+  #side { order: 3; width: 100% !important; height: auto; flex-direction: row; align-items: stretch; gap: 2px; padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+    border-right: 0; border-top: 1px solid var(--line); box-shadow: 0 -4px 18px rgba(20,30,60,.05); }
+  #side .logo, #side .more-label, #stats, #collapse { display: none !important; }
+  #side nav { display: contents; }
+  .nav { flex: 1; flex-direction: column; justify-content: center; gap: 3px; padding: 7px 2px; font-size: 11px; font-weight: 500; text-align: center; border-radius: 10px; min-height: 52px; }
+  .nav i svg { width: 22px; height: 22px; }
+  .nav.on { background: var(--blue-soft); color: var(--blue); } .nav.on i { color: var(--blue); }
+  body.collapsed #side span { display: inline !important; }
+  #main { order: 1; flex: 1; min-height: 0; }
+  /* top bar */
+  #top { height: calc(62px + env(safe-area-inset-top)); padding-top: env(safe-area-inset-top); flex: none; }
+  #top .center { gap: 12px; margin-right: 34px; }
+  #top .right { right: 6px; top: calc(env(safe-area-inset-top) + 11px); }
+  #top .right #fontBtn, #top .right #pageBtn { display: none; }
+  .voice-btn { width: 40px; height: 40px; font-size: 16px; }
+  .play { width: 50px; height: 50px; } .play svg { width: 22px; height: 22px; }
+  .ico { width: 42px; height: 42px; }
+  .speed { min-width: 52px; font-size: 14.5px; padding: 8px 6px; }
+  #progress span { font-size: 10.5px; top: 6px; }
+  /* content */
+  .view { padding: 22px 10px 28px; -webkit-overflow-scrolling: touch; }
+  .card { padding: 20px 18px 22px; border-radius: 12px; }
+  .card .close { top: 4px; right: 4px; }
+  #newText { min-height: 42dvh; font-size: max(17px, var(--read)); }
+  #text { font-size: max(17px, var(--read)); line-height: max(1.65, var(--lh)); }
+  .chips { flex-direction: column; } .chip { justify-content: center; padding: 13px 16px; font-size: 15px; }
+  .fig { margin: 1.1em auto 1.3em; width: 100% !important; }
+  #pages { gap: 14px; }
+  /* library */
+  .libhead { grid-template-columns: auto 1fr; margin: 0 4px 10px; } .libhead > span { display: none; } .libhead h2 { text-align: right; font-size: 19px; }
+  #docs li { padding: 12px 8px; gap: 12px; } #docs .t { font-size: 14.5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  #docs .menu { right: 8px; }
+  /* sheets: every panel slides up from the bottom */
+  .pop { position: fixed; left: 0 !important; right: 0 !important; top: auto !important; bottom: 0; width: 100% !important; max-width: 100%;
+    max-height: 86dvh; overflow-y: auto; overscroll-behavior: contain; border-radius: 20px 20px 0 0; border: 0;
+    padding: 6px 16px calc(18px + env(safe-area-inset-bottom)) !important; box-shadow: 0 -10px 40px rgba(0,0,0,.22); transform-origin: bottom center; transition: transform .2s var(--ease); }
+  .pop:not([hidden]) { animation: sheetUp .38s cubic-bezier(.2, .9, .25, 1); }
+  .pop.closing { animation: sheetDown .22s ease-in forwards; }
+  @keyframes sheetUp { from { transform: translateY(100%); } }
+  @keyframes sheetDown { to { transform: translateY(100%); } }
+  .grip { display: block; width: 40px; height: 5px; border-radius: 3px; background: var(--line); margin: 6px auto 10px; }
+  body:has(.pop:not([hidden]):not(.closing))::after { content: ""; position: fixed; inset: 0; background: rgba(10,12,18,.38); z-index: 19; animation: fadeIn .25s ease; }
+  .pop .pophead .x, .tabs .x, .grid > .x { display: none; }
+  #popVoice { display: flex; flex-direction: column; }
+  #voiceList { max-height: none; flex: 1; min-height: 200px; overflow-y: auto; }
+  .filters button { font-size: 12.5px; padding: 9px 0; }
+  #voiceList li { padding: 11px 10px; } .pv { width: 40px; height: 40px; }
+  .tabs { margin: 0 -16px 12px; padding: 0 6px 8px; position: sticky; top: -6px; background: var(--panel); z-index: 2; }
+  .speedbox { grid-template-columns: 1fr 70px 1.2fr; height: 270px; } .vslider { height: 250px; } #spRange { height: 240px; } .marks { height: 240px; font-size: 13px; }
+  .presets button { padding: 11px 0; font-size: 14px; }
+  select, input, textarea { font-size: 16px !important; }       /* stops iOS zooming into fields */
+  select { min-width: 130px; padding: 10px; }
+  .row { padding: 12px 0; } .tog { width: 46px; height: 28px; border-radius: 14px; } .tog::after { width: 24px; height: 24px; } .tog:checked::after { left: 20px; }
+  #popMore { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px 8px; padding-top: 6px !important; }
+  #popMore .grip { grid-column: 1 / -1; }
+  .tile i { width: 58px; height: 58px; }
+  .timers button { padding: 13px 0; font-size: 15px; }
+  .stepper button { width: 44px; height: 44px; font-size: 22px; }
+  .mixrow { grid-template-columns: 28px 1fr 28px; } .mixrow #mixA, .mixrow #mixB { display: none; }
+  /* pronunciation: full-height sheet */
+  .modal { align-items: end; } .mcard { width: 100%; max-height: 92dvh; border-radius: 20px 20px 0 0; padding: 18px 16px calc(18px + env(safe-area-inset-bottom)); }
+  .modal:not([hidden]) .mcard { animation: sheetUp .38s cubic-bezier(.2, .9, .25, 1); }
+  .mcard td input { padding: 10px; }
+  #toast { bottom: calc(84px + env(safe-area-inset-bottom)); max-width: 90vw; text-align: center; }
+  #readsel { padding: 11px 18px; font-size: 14px; border-radius: 22px; }
+  .lightbox canvas { max-width: 96vw; }
+}
+/* long words and web addresses wrap instead of pushing the page sideways */
+#text, #text .s, #newText, #docs .t { overflow-wrap: anywhere; word-break: normal; }
+.view { overflow-x: hidden; }
+
+/* ================= top bar: play button at the exact centre ================= */
+#top .center { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; width: 100%; gap: 0; margin: 0; }
+#top .center .side { display: flex; align-items: center; gap: 22px; }
+#top .center .side.l { justify-content: flex-end; padding-right: 26px; }
+#top .center .side.r { justify-content: flex-start; padding-left: 26px; }
+#top .right { z-index: 2; }
+.phone-only { display: none !important; }
+@media (max-width: 760px) {
+  #top .center .side { gap: 10px; }
+  #top .center .side.l { padding-right: 14px; } #top .center .side.r { padding-left: 14px; }
+  #top .right { display: none; }
+  .phone-only { display: flex !important; } .no-phone { display: none !important; }
+}
+@media (max-width: 360px) { #top .center .side { gap: 4px; } #top .center .side.l { padding-right: 10px; } #top .center .side.r { padding-left: 10px; } }
+
+</style>
+</head>
+<body>
+<aside id="side">
+  <div class="logo"><span class="mark">R</span><span class="word">Reader</span>
+    <button id="collapse" class="ico" title="Collapse sidebar"><svg viewBox="0 0 24 24"><path d="M11 17l-5-5 5-5M18 17l-5-5 5-5"/></svg></button></div>
+  <nav>
+    <button class="nav" data-go="add"><i><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></i><span>Add Text</span></button>
+    <button class="nav" data-go="upload"><i><svg viewBox="0 0 24 24"><path d="M12 15V4m0 0L7.5 8.5M12 4l4.5 4.5"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg></i><span>Upload</span></button>
+    <button class="nav" data-go="library"><i><svg viewBox="0 0 24 24"><rect x="4" y="4" width="4" height="16" rx="1"/><rect x="10" y="4" width="4" height="16" rx="1"/><path d="M16.5 5.2l3.3-.9 3.9 14.6-3.3.9z" transform="translate(-2.5 0)"/></svg></i><span>Library</span></button>
+  </nav>
+  <div class="more-label">More</div>
+  <nav>
+    <button class="nav phone-only" data-go="more"><i><svg viewBox="0 0 24 24" class="fill"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></i><span>More</span></button>
+    <button class="nav no-phone" data-go="pron"><i><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg></i><span>Pronunciation</span></button>
+  </nav>
+  <a class="nav tkback no-phone" href="../" title="Back to Taskist"><i><svg viewBox="0 0 24 24"><path d="M19 12H5M11 18l-6-6 6-6"/></svg></i><span>Back to Taskist</span></a>
+  <div id="stats"></div>
+  <input type="file" id="file" accept="application/pdf" hidden>
+</aside>
+
+<div id="main">
+  <header id="top">
+    <div class="center">
+      <div class="side l"><button id="voiceBtn" class="voice-btn" title="Voices"><span id="voiceInitial">H</span></button><button id="back" class="ico" title="Previous sentence (←)"><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4.5h4.5"/></svg></button></div>
+      <button id="play" class="play" title="Play / Pause (Space)"><svg class="i-play fill" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg><svg class="i-pause fill" viewBox="0 0 24 24"><rect x="6.5" y="5" width="4" height="14" rx="1.2"/><rect x="13.5" y="5" width="4" height="14" rx="1.2"/></svg><span class="ring"></span></button>
+      <div class="side r"><button id="fwd" class="ico" title="Next sentence (→)"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.4-5.7"/><path d="M20 4v4.5h-4.5"/></svg></button><button id="speedBtn" class="speed" title="Speed and reading settings">1.00x</button></div>
+    </div>
+    <div class="right">
+      <button id="pageBtn" class="ico" title="Original page view" hidden><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg></button>
+      <button id="fontBtn" class="ico" title="Font settings">Aa</button>
+      <button id="moreBtn" class="ico" title="More"><svg viewBox="0 0 24 24" class="fill"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg></button>
+    </div>
+    <div id="progress"><div id="bar"></div><span id="tNow">00:00</span><span id="tAll">00:00</span></div>
+  </header>
+
+  <!-- add text -->
+  <section id="vAdd" class="view">
+    <div class="card">
+      <textarea id="newText" placeholder="Drag and drop a PDF, or type or paste text here."></textarea>
+      <div class="chips">
+        <button class="chip" id="chipPdf"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>Open a PDF</button>
+        <button class="chip primary" id="chipListen"><svg class="fill" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg>Listen to this text</button>
+      </div>
+      <div id="busy" hidden></div>
+    </div>
+  </section>
+
+  <!-- reader -->
+  <section id="vRead" class="view" hidden>
+    <div class="card doc">
+      <button class="close ico" id="closeDoc" title="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      <div id="pill"></div>
+      <article id="text"></article>
+    </div>
+    <div id="pages" hidden></div>
+  </section>
+
+  <!-- library -->
+  <section id="vLib" class="view" hidden>
+    <div class="libhead"><button class="link" id="libBack">‹ Reading</button><h2>Library <sup id="libCount"></sup></h2><span></span></div>
+    <ul id="docs"></ul>
+  </section>
+</div>
+
+<!-- popovers -->
+<div id="popVoice" class="pop" hidden>
+  <span class="grip"></span><div class="pophead"><div class="vtitle"><b>Voices</b><small id="vCount"></small></div><button class="ico x"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div class="filters"><span class="fpill"></span>
+    <button data-f="all" class="on">All</button><button data-f="US">American</button><button data-f="UK">British</button>
+    <button data-f="F">Female</button><button data-f="M">Male</button>
+  </div>
+  <ul id="voiceList"></ul>
+  <div class="blend">
+    <label class="row"><span><b>Blend voices</b><small>Mix two voices into a new one</small></span><input type="checkbox" id="blendOn" class="tog"></label>
+    <div id="blendBox"><div class="inner">
+      <div class="row"><span>Blend with</span><select id="blendVoice"></select></div>
+      <div class="mixrow"><span class="mixav" id="mixAvA"></span><span id="mixA">Heart</span><input type="range" id="blendMix" min="10" max="90" step="5" value="30"><span id="mixB">Emma</span><span class="mixav" id="mixAvB"></span></div>
+      <div class="row"><small id="mixLabel"></small><button class="btn" id="blendPreview"><svg class="fill" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg>Preview blend</button></div>
+    </div></div>
+  </div>
+</div>
+
+<div id="popSet" class="pop" hidden>
+  <span class="grip"></span>
+  <div class="tabs">
+    <button data-t="speed" class="on"><i><svg viewBox="0 0 24 24"><path d="M12 13l4-4"/><path d="M3.5 17a9 9 0 1 1 17 0"/></svg></i>Speed</button><button data-t="readers"><i><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 19c.6-3.2 3-5 6-5s5.4 1.8 6 5"/><circle cx="17" cy="9" r="2.6"/><path d="M16.5 14.2c2.4.2 4 1.7 4.5 4.3"/></svg></i>Readers</button>
+    <button data-t="repeat"><i><svg viewBox="0 0 24 24"><path d="M4 11V9a3 3 0 0 1 3-3h12l-3-3M20 13v2a3 3 0 0 1-3 3H5l3 3"/></svg></i>Repeat</button><button data-t="pause"><i><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M10 9v6M14 9v6"/></svg></i>Pause</button>
+    <button data-t="more"><i><svg viewBox="0 0 24 24"><path d="M4 10v4h4l5 4V6L8 10z"/><path d="M16.5 9a4 4 0 0 1 0 6M19 6.5a7.5 7.5 0 0 1 0 11"/></svg></i>More</button><button class="ico x"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </div>
+  <div class="tab" data-t="speed">
+    <div class="speedbox">
+      <div class="readout"><button class="pm" id="spUp">+</button><b id="spVal">1.00x</b><small id="spWpm">(180 WPM)</small><button class="pm" id="spDn">−</button></div>
+      <div class="vslider"><input type="range" id="spRange" min="0.5" max="4" step="0.05" value="1" orient="vertical"></div>
+      <div class="marks"><span style="bottom:calc(100% - 4px)">4x <small>(720 wpm)</small></span><span style="bottom:calc(71.4% - 4px)">3x <small>(540 wpm)</small></span><span style="bottom:calc(42.9% - 4px)">2x <small>(360 wpm)</small></span><span style="bottom:calc(14.3% - 4px)">1x <small>(180 wpm)</small></span><span style="bottom:-4px">.5x <small>(90 wpm)</small></span></div>
+    </div>
+    <div class="presets"><button data-r="0.75">.75x</button><button data-r="1">1x</button><button data-r="1.25">1.25x</button><button data-r="1.5">1.5x</button><button data-r="2">2x</button></div>
+  </div>
+  <div class="tab" data-t="readers" hidden>
+    <label class="row"><span><b>Secondary reader</b><small>Turn on a second voice to switch while reading</small></span><input type="checkbox" id="secOn" class="tog"></label>
+    <div class="field"><label>Name of the secondary reader</label><select id="secVoice"></select></div>
+    <div class="field"><label>Switch reading by</label><select id="secBy"><option value="sentence">Sentence</option><option value="paragraph">Paragraph</option></select></div>
+  </div>
+  <div class="tab" data-t="repeat" hidden>
+    <div class="field"><label>Each sentence will be read</label>
+      <select id="repeat"><option value="1">1 time</option><option value="2">2 times</option><option value="3">3 times</option><option value="4">4 times</option><option value="5">5 times</option></select></div>
+  </div>
+  <div class="tab" data-t="pause" hidden>
+    <div class="field"><label>Pause time between sentences</label><select id="pauseS"></select></div>
+    <div class="field"><label>Pause time between paragraphs</label><select id="pauseP"></select></div>
+  </div>
+  <div class="tab" data-t="more" hidden>
+    <div class="field"><label>Text to Speech Volume <span id="volVal">100%</span></label><input type="range" id="vol" min="0" max="100" value="100"></div>
+    <label class="row"><span><b>Fast speed mode</b><small>Generate audio at your reading speed (up to 2x): faster to prepare and clearer than speeding it up</small></span><input type="checkbox" id="nativeSpeed" class="tog" checked></label>
+    <label class="row"><span><b>Skip footnotes and captions</b></span><input type="checkbox" id="skipNotes" class="tog" checked></label>
+  </div>
+</div>
+
+<div id="popMore" class="pop grid" hidden>
+  <span class="grip"></span>
+  <button class="ico x"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  <button class="tile" data-a="font"><i>Aa</i>Font</button>
+  <button class="tile" data-a="pron"><i>◌</i>Pronunciation</button>
+  <button class="tile" data-a="timer"><i>⏱</i>Timer</button>
+  <button class="tile" data-a="page"><i>▣</i>Page View</button>
+  <button class="tile" data-a="dark"><i>☾</i>Dark Mode</button>
+  <button class="tile" data-a="library"><i>▤</i>Library</button>
+  <button class="tile" data-a="taskist"><i>←</i>Taskist</button>
+</div>
+
+<div id="popFont" class="pop" hidden>
+  <span class="grip"></span>
+  <div class="pophead center"><b>Font Settings</b><button class="ico x"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div class="row"><span>Text Size</span><span class="stepper"><button id="fsDn">−</button><b id="fsVal">18</b><button id="fsUp">+</button></span></div>
+  <label class="row"><span>Text Spacing</span><input type="checkbox" id="spacing" class="tog"></label>
+  <label class="row"><span>Dyslexia-friendly Font</span><input type="checkbox" id="dys" class="tog"></label>
+</div>
+
+<div id="popTimer" class="pop" hidden>
+  <span class="grip"></span>
+  <div class="pophead center"><b>Sleep Timer</b><button class="ico x"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div class="timers"><button data-m="0">Off</button><button data-m="5">5 min</button><button data-m="10">10 min</button><button data-m="15">15 min</button><button data-m="30">30 min</button><button data-m="60">60 min</button></div>
+  <small id="timerLeft"></small>
+</div>
+
+<div id="modalPron" class="modal" hidden>
+  <div class="mcard">
+    <div class="pophead"><b>Pronunciation</b><button class="ico x"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <p class="hint">Teach the voice how to say names, acronyms and terms. Write it the way it sounds — e.g. <i>Siobhan → Shivawn</i>, <i>SQL → sequel</i>.</p>
+    <table><thead><tr><th>Word</th><th>Say it as</th><th></th></tr></thead><tbody id="pronRows"></tbody></table>
+    <div class="row"><button class="btn ghost" id="pronAdd">＋ Add word</button><button class="btn" id="pronSave">Save</button></div>
+  </div>
+</div>
+
+<button id="readsel" hidden>▶ Read selection</button>
+<div id="toast" hidden></div>
+<script type="module">
+// ---------- sentence segmentation (port of segment.py) ----------
+const ABBREV = new Set(("mr mrs ms dr prof sr jr st mt ft no nos vol vols fig figs eq eqs ref refs sec ch chap pp p ed eds al etc vs cf approx " +
+  "dept est inc ltd co corp jan feb mar apr jun jul aug sep sept oct nov dec e.g i.e u.s u.k a.m p.m ph.d gen gov rev col lt sgt capt op art").split(" "));
+const MAX_LEN = 200;
+function isAbbrev(text, dotPos) {
+  const m = /([A-Za-z][A-Za-z.]*)$/.exec(text.slice(0, dotPos));
+  if (!m) return false;
+  const w = m[1].toLowerCase().replace(/\.+$/, "");
+  return ABBREV.has(w) || (w.length === 1 && /[A-Z]/.test(m[1]));
+}
+function splitLong(text, start, end) {
+  if (end - start <= MAX_LEN) return [[start, end]];
+  const seg = text.slice(start, end); let best = null;
+  const re = /[;:—–]\s+|,\s+(?=(?:and|but|or|which|while|whereas|although|because)\b)|,\s+/g; let m;
+  while ((m = re.exec(seg))) {
+    const pos = m.index + m[0].length;
+    if (pos > 60 && pos < seg.length - 30) {
+      const score = Math.abs(pos - seg.length / 2) - (/[;:—–]/.test(m[0][0]) ? 200 : 0);
+      if (!best || score < best[0]) best = [score, pos];
+    }
+  }
+  if (!best) return [[start, end]];
+  const cut = start + best[1];
+  return [...splitLong(text, start, cut), ...splitLong(text, cut, end)];
+}
+function splitSentences(text) {
+  const spans = []; let start = 0;
+  const re = /([.!?…]+)(["'”’)\]]*)(\s+)(?=["'“‘(\[]?[A-Z0-9])/g; let m;
+  while ((m = re.exec(text))) {
+    const dot = m.index;
+    if (m[1] === "." && isAbbrev(text, dot)) continue;
+    if (/^\s*(\(?[\dIVXivxA-Za-z]{1,4}[.)])+\s*$/.test(text.slice(start, dot + m[1].length))) continue;
+    const end = dot + m[1].length + m[2].length;
+    if (text.slice(start, end).trim()) spans.push(...splitLong(text, start, end));
+    start = end + m[3].length;
+  }
+  if (text.slice(start).trim()) spans.push(...splitLong(text, start, text.length));
+  return spans;
+}
+
+// ---------- normalisation: written text -> spoken text (port of normalize.py) ----------
+const ABBR = [[/\be\.g\.,?/g, "for example,"], [/\bi\.e\.,?/g, "that is,"], [/\betc\./g, "et cetera."], [/\bet al\./g, "and colleagues"],
+  [/\bcf\./g, "compare"], [/\bvs\.?(?=\s)/g, "versus"], [/\bapprox\./g, "approximately"], [/\bFigs?\.\s*(?=\d)/g, "Figure "],
+  [/\bEqs?\.\s*(?=\(?\d)/g, "Equation "], [/\bSec\.\s*(?=\d)/g, "Section "], [/\bCh\.\s*(?=\d)/g, "Chapter "], [/\bVol\.\s*(?=\d)/g, "Volume "],
+  [/\bpp\.\s*(?=\d)/g, "pages "], [/\bp\.\s*(?=\d)/g, "page "], [/\bNo\.\s*(?=\d)/g, "number "], [/\bNos\.\s*(?=\d)/g, "numbers "],
+  [/\bMr\./g, "Mister"], [/\bMrs\./g, "Missus"], [/\bMs\./g, "Miz"], [/\bProf\./g, "Professor"], [/\bJr\./g, "Junior"],
+  [/\bSr\.(?=\s+[A-Z])/g, "Senior"], [/\bDept\./g, "Department"], [/\bInc\./g, "Incorporated"], [/\bLtd\./g, "Limited"],
+  [/\bCorp\./g, "Corporation"], [/\bw\/o\b/g, "without"], [/\bw\/\s/g, "with "], [/\bPh\.D\.?/g, "P H D"], [/\bU\.S\.A?\.?/g, "U S"], [/\bU\.K\./g, "U K"]];
+const UNITS = { km: "kilometres", m: "metres", cm: "centimetres", mm: "millimetres", nm: "nanometres", "µm": "micrometres", kg: "kilograms",
+  g: "grams", mg: "milligrams", lb: "pounds", lbs: "pounds", ml: "millilitres", mL: "millilitres", l: "litres", L: "litres", kWh: "kilowatt hours",
+  kW: "kilowatts", MW: "megawatts", GW: "gigawatts", W: "watts", V: "volts", Hz: "hertz", kHz: "kilohertz", MHz: "megahertz", GHz: "gigahertz",
+  KB: "kilobytes", MB: "megabytes", GB: "gigabytes", TB: "terabytes", ms: "milliseconds", s: "seconds", min: "minutes", h: "hours", hrs: "hours",
+  mph: "miles per hour", "km/h": "kilometres per hour", ha: "hectares", "°C": "degrees Celsius", "°F": "degrees Fahrenheit", ppm: "parts per million" };
+const SYMBOLS = { "±": " plus or minus ", "×": " times ", "≈": " approximately ", "≤": " less than or equal to ", "≥": " greater than or equal to ",
+  "≠": " not equal to ", "→": " to ", "∞": " infinity ", "&": " and ", "§": " section ", "¶": "", "•": "", "▪": "", "·": " ", "†": "", "‡": "",
+  "©": " copyright ", "®": "", "™": "", "°": " degrees", "µ": " micro", "~": " about " };
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const ORD = ["", "First", "Second", "Third", "Fourth", "Fifth", "Sixth", "Seventh", "Eighth", "Ninth", "Tenth", "Eleventh", "Twelfth"];
+const COUNTED = new Set("Phase Type Class Stage Level Grade Tier Model Mark Title Schedule Figure Table Step Round Series Category Group Unit".split(" "));
+const R = { I: 1, V: 5, X: 10, L: 50, C: 100, D: 500, M: 1000 };
+function roman(s) {
+  if (!s || !/^M{0,3}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$/.test(s)) return null;
+  let t = 0; for (let i = 0; i < s.length; i++) { const v = R[s[i]]; t += i + 1 < s.length && R[s[i + 1]] > v ? -v : v; } return t;
+}
+const reEsc = (s) => s.replace(/[.*+?^${}()|[\]\\\/]/g, "\\$&");
+function normalize(text, kind = "para", lexicon = {}) {
+  let t = text;
+  for (const [w, say] of Object.entries(lexicon)) if (w && say) t = t.replace(new RegExp(`(?<![\\w-])${reEsc(w)}(?![\\w-])`, "g"), () => say);
+  t = t.replace(/(?<=\w)[⁰¹²³⁴⁵⁶⁷⁸⁹*†‡]+|^\s*[⁰¹²³⁴⁵⁶⁷⁸⁹*†‡]+\s*/g, "");
+  t = t.replace(/\[(\d+(?:\s*[,–-]\s*\d+)*)\]/g, "");
+  t = t.replace(/(?<=[a-z][.,;:])(\d{1,3}(?:,\d{1,3})*)(?=\s|$)/g, "");
+  t = t.replace(/https?:\/\/(www\.)?([^\s/]+?)(?:\/\S*?)?(?=[.,;:)]?(?:\s|$))/g, (_, w, d) => "a link to " + d.replace(/\./g, " dot "));
+  t = t.replace(/\bwww\.([^\s/]+?)(?:\/\S*?)?(?=[.,;:)]?(?:\s|$))/g, (_, d) => d.replace(/\./g, " dot "));
+  t = t.replace(/\b([\w.+-]+)@([\w-]+)\.([\w.]+)\b/g, (_, a, b, c) => `${a} at ${b} dot ${c.replace(/\./g, " dot ")}`);
+  for (const [p, r] of ABBR) t = t.replace(p, r);
+  t = t.replace(/(?<=[a-z]) Dr\.(?=[,;:]|\s+[a-z\d]|\s*$)/g, " Drive").replace(/(?<=[a-z]) St\.(?=[,;:]|\s+[a-z\d]|\s*$)/g, " Street")
+    .replace(/(?<=[a-z]) Ave\./g, " Avenue").replace(/\bDr\./g, "Doctor").replace(/\bSt\.(?=\s+[A-Z])/g, "Saint");
+  t = t.replace(/\b(\d{4})-(\d{2})-(\d{2})\b/g, (m, y, mo, d) => (+mo >= 1 && +mo <= 12 ? `${MONTHS[+mo - 1]} ${+d}, ${y}` : m));
+  t = t.replace(/(?<![\w.])(\$?\d[\d,.]*)\s*[–—-]\s*(\$?\d[\d,.]*)(?![\w.]*\d)/g, "$1 to $2");
+  const multi = Object.keys(UNITS).filter((u) => u.length > 1).sort((a, b) => b.length - a.length).map(reEsc).join("|");
+  const single = Object.keys(UNITS).filter((u) => u.length === 1).join("|");
+  t = t.replace(new RegExp(`(\\d)\\s?(${multi})(?![\\w/])`, "g"), (_, d, u) => `${d} ${UNITS[u]}`);
+  t = t.replace(new RegExp(`(\\d) (${single})(?=[\\s,.;:)]|$)`, "g"), (_, d, u) => `${d} ${UNITS[u]}`);
+  t = t.replace(/(\d)\s?%/g, "$1 percent");
+  const FR = { "1/2": "one half", "1/3": "one third", "2/3": "two thirds", "1/4": "one quarter", "3/4": "three quarters" };
+  t = t.replace(/(?<![\d/])(1\/2|1\/3|2\/3|1\/4|3\/4)(?![\d/])/g, (m) => FR[m]).replace(/(?<![\d/])(\d+)\/(\d+)(?![\d/])/g, "$1 over $2");
+  t = t.replace(/\b(Chapter|Part|Book|Volume|Section|Appendix|Act|Scene|World War|Article)\s+([IVXLCDM]+)\b/g, (m, w, r) => `${w} ${roman(r) ?? r}`);
+  t = t.replace(/\b([A-Z][a-z]+)\s+(II|III|IV|VI|VII|VIII|IX|XI|XII)\b/g, (m, w, r) => { const n = roman(r); return n == null ? m : COUNTED.has(w) ? `${w} ${n}` : `${w} the ${ORD[n]}`; });
+  t = t.replace(/(?<=[\w)])\s*<=\s*|\s+<=\s+/g, " less than or equal to ").replace(/(?<=[\w)])\s*>=\s*|\s+>=\s+/g, " greater than or equal to ")
+    .replace(/(?<=\w)\s+<\s+(?=[\w$-])/g, " less than ").replace(/(?<=\w)\s+>\s+(?=[\w$-])/g, " greater than ").replace(/(?<=\w)\s+=\s+(?=[\w$-])/g, " equals ");
+  for (const [s, w] of Object.entries(SYMBOLS)) t = t.split(s).join(w);
+  t = t.replace(/…/g, "...").replace(/—/g, ", ").replace(/ – /g, ", ").replace(/\(\s*\)/g, "").replace(/\s+([,.;:!?])/g, "$1").replace(/\s{2,}/g, " ").trim();
+  if ((kind === "heading" || kind === "caption") && t && !/[.!?:]$/.test(t)) t += ".";
+  return t;
+}
+
+// plain pasted text -> document structure
+function textDocument(text, title) {
+  const paras = text.replace(/\r/g, "").split(/\n\s*\n/).map((p) => p.replace(/\s*\n\s*/g, " ").trim()).filter(Boolean);
+  const blocks = []; let sid = 0;
+  paras.forEach((p, bi) => {
+    const sents = splitSentences(p).map(([a, b]) => p.slice(a, b).trim()).filter((s) => /\w/.test(s)).map((s) => ({ id: sid++, text: s, rects: [] }));
+    const kind = paras.length > 1 && p.length < 90 && !/[.!?,;:]$/.test(p) ? "heading" : "para";
+    if (sents.length) blocks.push({ id: bi, kind, page: 0, sentences: sents });
+  });
+  const first = paras[0] || "Untitled";
+  return { title: title || first.slice(0, 60) + (first.length > 60 ? "…" : ""), pages: 0, page_sizes: [], ocr_pages: [], blocks, sentence_count: sid };
+}
+
+// Repairs PDF fonts whose text layer is garbled: fonts embedded without a ToUnicode map, where
+// pdf.js hands back raw glyph numbers instead of letters (e.g. "KWWSV" for "https").
+// 1. find, per font, the code shift that makes the text read most like English (usually 29 = TrueType glyph order)
+// 2. decode printable characters with that shift
+// 3. work out the remaining glyphs (ligatures, quotes, dashes) from the document's own vocabulary
+const MAC_GLYPHS = ["", "", "", " ", "!", "\"", "#", "$", "%", "&", "'", "(", ")", "*", "+", ",", "-", ".", "/", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", ":", ";", "<", "=", ">", "?", "@", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "[", "\\", "]", "^", "_", "`", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "{", "|", "}", "~", "Ä", "Å", "Ç", "É", "Ñ", "Ö", "Ü", "á", "à", "â", "ä", "ã", "å", "ç", "é", "è", "ê", "ë", "í", "ì", "î", "ï", "ñ", "ó", "ò", "ô", "ö", "õ", "ú", "ù", "û", "ü", "†", "°", "¢", "£", "§", "•", "¶", "ß", "®", "©", "™", "´", "¨", "≠", "Æ", "Ø", "∞", "±", "≤", "≥", "¥", "µ", "∂", "∑", "∏", "π", "∫", "ª", "º", "Ω", "æ", "ø", "¿", "¡", "¬", "√", "ƒ", "≈", "∆", "«", "»", "…", " ", "À", "Ã", "Õ", "Œ", "œ", "–", "—", "“", "”", "‘", "’", "÷", "◊", "ÿ", "Ÿ", "⁄", "¤", "‹", "›", "fi", "fl", "‡", "·", "‚", "„", "‰", "Â", "Ê", "Á", "Ë", "È", "Í", "Î", "Ï", "Ì", "Ó", "Ô", "", "Ò", "Ú", "Û", "Ù", "ı", "ˆ", "˜", "¯", "˘", "˙", "˚", "¸", "˝", "˛", "ˇ", "Ł", "ł", "Š", "š", "Ž", "ž", "¦", "Ð", "ð", "Ý", "ý", "Þ", "þ", "−", "×", "¹", "²", "³", "½", "¼", "¾", "₣", "Ğ", "ğ", "İ", "Ş", "ş", "Ć", "ć", "Č", "č", "đ"];
+const COMMON = new Set(("the of and to in a is that for it as was with be by on not he this are or his from at which but have an they you were her she " +
+  "there been one all we their has would when if so no will more out up who what about can into than them only other its some could time these two may then do " +
+  "first any my now such like our over me even most made after also did many before must through back years where much your way well down should because each " +
+  "just those people how too little state good very make world still own see men work long get here between both life being under never day same another know " +
+  "while last might us great old year off come since against go came right used take three war during jews german government number").split(" "));
+const LIG = ["fi", "fl", "ff", "ffi", "ffl", "ft", "st", "Th"];
+const wordsOf = (s) => s.toLowerCase().match(/\p{L}+/gu) || [];
+// common words that are usually typeset with ligatures, so they rarely appear "clean" in such documents
+const LIG_WORDS = ("office officer officers official officials officially efficient efficiency sufficient sufficiently insufficient difficult difficulties difficulty " +
+  "different difference differences differ differs differing differed differently effort efforts effect effects effective effectively offer offered offering " +
+  "offers offence offense offensive affair affairs afford affected affect affidavit affidavits staff suffer suffered suffering traffic buffer stuff sheriff " +
+  "baffled shuffle ruffle raffle waffle first find found finds final finally figure figures fight fighting field fields film films fire fired five fifty fifth fifteen " +
+  "fiction finance financial confirm confirmed confirms identified identify justified specific specifically scientific significant significance profit " +
+  "flow flows flee fled flight floor floors flag flame flames influence influenced influential conflict conflicts reflect reflected reflects inflated fluid " +
+  "flu fly flying flat flesh flood flour flower florida flourish benefit benefits definite definitely definition infinite fifties qualified classified " +
+  "falsified falsification certified certificate artificial sacrifice sacrificed crucified magnificent terrific pacific fiscal").split(" ");
+// share of the text made of very common English words (about 0.25-0.5 for normal prose, ~0 for garbled text)
+function englishScore(s) { if (s.length < 20) return 0; const w = wordsOf(s); let n = 0; for (const x of w) if (COMMON.has(x)) n += x.length + 1; return n / s.length; }
+function shiftChar(code, k) { const c = code + k; return c >= 32 && c <= 126 ? String.fromCharCode(c) : null; }
+
+const isLetters = (g) => /^\p{L}+$/u.test(g);
+const OPEN = new Set(["“", "‘", "„", "«", "‚", "(", "["]), CLOSE = new Set(["”", "’", "»", ")", "]", ".", ",", ";", ":", "!", "?", "²", "³", "¹"]);
+const DASH = new Set(["–", "—", "−"]);
+// how well punctuation fits where it appears: pos is "start" | "end" | "mid" | "alone", with neighbouring chars
+function fits(g, o) {
+  if (OPEN.has(g)) return o.pos === "start" ? 1 : 0;
+  if (g === "’") return o.pos === "mid" && /\p{L}/u.test(o.prev) && o.after <= 2 && /^[stdlrvm]/i.test(o.next) ? 1 : o.pos === "end" ? 0.6 : 0;
+  if (CLOSE.has(g)) return o.pos === "end" ? (g === "²" || g === "³" ? 0.5 : 0.8) : 0;
+  if (DASH.has(g)) return o.pos === "alone" ? 1 : o.pos === "mid" ? (/\d/.test(o.prev) && /\d/.test(o.next) ? (g === "–" ? 1 : 0.5) : g === "—" ? 0.9 : 0.4) : 0.1;
+  if (g === "×") return /\d/.test(o.prev) && /\d/.test(o.next) ? 1.1 : 0;
+  if (g === "…") return o.pos === "alone" || o.pos === "end" || (!/\p{L}|\d/u.test(o.prev) && !/\p{L}|\d/u.test(o.next)) ? 0.8 : 0;
+  return 0;
+}
+
+function fixFontEncoding(items, log = () => {}) {
+  const byFont = new Map();
+  for (const it of items) { if (!byFont.has(it.font)) byFont.set(it.font, []); byFont.get(it.font).push(it); }
+  const shift = (str, k) => [...str].map((c) => { const x = c.charCodeAt(0); return x === 32 ? " " : shiftChar(x, k) ?? " "; }).join("");
+  const cands = [];
+  for (const [font, its] of byFont) {
+    const raw = its.map((i) => i.str).join(" ");
+    if (raw.replace(/\s/g, "").length < 20) continue;
+    const ctrl = [...raw].filter((c) => c.charCodeAt(0) < 32).length / raw.length;
+    const base = englishScore(raw);
+    if (base > 0.1 && ctrl < 0.02) continue;                          // reads fine already
+    const sample = raw.slice(0, 6000); const scores = new Map();
+    for (let k = -64; k <= 64; k++) if (k) scores.set(k, englishScore(shift(sample, k)));
+    cands.push({ font, its, base, scores, weight: sample.length });
+  }
+  // one shift for the whole document when the evidence agrees (small fonts borrow it)
+  const total = new Map();
+  for (const c of cands) for (const [k, sc] of c.scores) total.set(k, (total.get(k) || 0) + sc * c.weight);
+  const consensus = [...total.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+  const fixed = [];
+  for (const c of cands) {
+    const best = [...c.scores.entries()].sort((a, b) => b[1] - a[1])[0];
+    const k = c.scores.get(consensus) >= best[1] * 0.7 ? consensus : best[0];
+    const sc = c.scores.get(k);
+    if (sc < 0.1 || sc < c.base * 2 + 0.05) continue;
+    fixed.push({ font: c.font, k, its: c.its });
+  }
+  if (!fixed.length) return 0;
+
+  // vocabulary from text that reads correctly (good fonts + decoded words with no unknown glyphs)
+  const vocab = new Set([...COMMON, ...LIG_WORDS]); const add = (w) => vocab.add(w);
+  const fixedFonts = new Set(fixed.map((f) => f.font));
+  for (const it of items) if (!fixedFonts.has(it.font)) wordsOf(it.str).forEach(add);
+  const occ = new Map();   // unknown code -> occurrences [{word pieces, pos, prev, next}]
+  for (const f of fixed) for (const it of f.its) {
+    const pieces = [...it.str].map((c) => { const x = c.charCodeAt(0); return x === 32 ? " " : shiftChar(x, f.k) ?? { code: x }; });
+    it._pieces = pieces;
+    let buf = [];
+    const flush = () => {
+      if (!buf.length) return;
+      const unk = buf.filter((p) => typeof p !== "string");
+      if (!unk.length) wordsOf(buf.join("")).forEach(add);
+      buf.forEach((p, i) => {
+        if (typeof p === "string") return;
+        const prev = typeof buf[i - 1] === "string" ? buf[i - 1] : "", next = typeof buf[i + 1] === "string" ? buf[i + 1] : "";
+        const pos = buf.length === 1 ? "alone" : i === 0 ? "start" : i === buf.length - 1 ? "end" : "mid";
+        if (!occ.has(p.code)) occ.set(p.code, []);
+        if (occ.get(p.code).length < 400) occ.get(p.code).push({ w: buf, pos, prev, next, after: buf.length - 1 - i, single: unk.length === 1 });
+      });
+      buf = [];
+    };
+    for (const p of pieces) { if (p === " ") flush(); else buf.push(p); }
+    flush();
+  }
+  // score candidates for each unknown glyph
+  const PUNCT = ["“", "”", "‘", "’", "–", "—", "…", "„"];
+  const evalCand = (code, g) => {
+    let s = 0;
+    for (const o of occ.get(code)) {
+      if (isLetters(g)) {
+        if (o.pos === "alone") continue;
+        if (o.single) { const word = o.w.map((p) => (typeof p === "string" ? p : g)).join(""); const ws = wordsOf(word); if (ws.length && ws.every((x) => vocab.has(x))) s += 1; }
+        if (/\p{L}/u.test(o.prev) && /\p{L}/u.test(o.next)) s += LIG.includes(g) ? 0.3 : 0.05;
+      } else if (DASH.has(g) && o.pos === "mid" && /\p{L}/u.test(o.prev) && /\p{L}/u.test(o.next)) {
+        // a dash joining letters is only plausible when both sides are real words ("older—and"), not "o—cial"
+        const i = o.w.findIndex((p) => typeof p !== "string" && p.code === code);
+        const L = wordsOf(o.w.slice(0, i).filter((p) => typeof p === "string").join("")).pop() || "", R = wordsOf(o.w.slice(i + 1).filter((p) => typeof p === "string").join(""))[0] || "";
+        const known = (vocab.has(L) ? 1 : 0) + (vocab.has(R) ? 1 : 0);
+        s += g === "—" ? [0.1, 0.5, 0.95][known] : [0.05, 0.3, 0.5][known];
+      } else s += fits(g, o);
+    }
+    return s / Math.max(1, occ.get(code).length);
+  };
+  const decided = new Map(), evidence = [], scored = new Map();
+  for (const code of occ.keys()) {
+    const opts = [];
+    for (const d of [0, 1, -1, 2]) { const g = MAC_GLYPHS[code + d]; if (g) opts.push({ g, d }); }
+    if (code >= 250) for (const g of [...LIG, ...PUNCT]) opts.push({ g, d: null });
+    for (const o of opts) o.s = evalCand(code, o.g);
+    opts.sort((a, b) => b.s - a.s);
+    scored.set(code, opts);
+    const [b1, b2] = opts;               // clear winners teach us the table offset around this code
+    if (b1 && b1.d !== null && b1.s >= 0.3 && (!b2 || b1.s - b2.s >= 0.15)) evidence.push([code, b1.d]);
+  }
+  const predicted = (code) => { let d = 0, dist = 1e9; for (const [c, dd] of evidence) if (c !== code && Math.abs(c - code) < dist) { dist = Math.abs(c - code); d = dd; } return d; };
+  for (const [code, opts] of scored) {
+    const pd = predicted(code);
+    const top = opts.length ? opts[0].s : 0;
+    const near = opts.filter((o) => o.s >= top - 0.1 && o.s >= 0.3);
+    near.sort((a, b) => (a.d === pd ? -1 : 0) - (b.d === pd ? -1 : 0) || b.s - a.s);
+    decided.set(code, near.length ? near[0].g : MAC_GLYPHS[code + pd] || "");
+  }
+  // ligatures usually sit together in the font (ff, ffi, ffl): complete an obvious run
+  for (const [c, g] of decided) if (g === "ff" && decided.get(c + 1) === "ffi" && decided.has(c + 2) && !LIG.includes(decided.get(c + 2)) || (g === "ff" && decided.get(c + 1) === "ffi" && decided.get(c + 2) && decided.get(c + 2).length < 2)) decided.set(c + 2, "ffl");
+  for (const f of fixed) for (const it of f.its) { it.str = it._pieces.map((p) => (typeof p === "string" ? p : decided.get(p.code) ?? "")).join(""); delete it._pieces; }
+  log(`Repaired garbled text in ${fixed.length} font${fixed.length > 1 ? "s" : ""} (${decided.size} special characters worked out)`);
+  return fixed.length;
+}
+
+// PDF -> readable structure (port of extract.py on top of pdf.js; OCR for scanned pages via tesseract.js)
+
+
+const EDGE = 0.12; // top/bottom band where running headers and page numbers live
+
+// one text item -> {str, x0, y0, x1, y1, size, bold}  (top-left origin, PDF points)
+function itemsFromText(content, viewport) {
+  const H = viewport.height, out = [];
+  for (const it of content.items) {
+    if (!("str" in it)) continue;
+    const [a, b, c, d, e, f] = it.transform;
+    if (Math.abs(b) > Math.abs(a) * 0.2) continue;               // rotated text (margins, watermarks)
+    const size = Math.hypot(c, d) || it.height || 10;
+    const str = it.str.replace(/\s+/g, " ");
+    if (!str.trim()) { if (out.length && it.hasEOL) out.at(-1).eol = true; continue; }
+    const font = (content.styles?.[it.fontName]?.fontFamily || "") + " " + it.fontName;
+    out.push({ str, font: it.fontName, x0: e, x1: e + (it.width || size * str.length * 0.5), y0: H - f - size * 0.85, y1: H - f + size * 0.2, size,
+      bold: /bold|black|heavy/i.test(font), eol: !!it.hasEOL });
+  }
+  return out;
+}
+
+// group items into lines (same baseline, horizontally continuous), then lines into blocks
+function buildBlocks(items, pno) {
+  const lines = [];
+  for (const it of items) {
+    const ln = lines.at(-1);
+    if (ln && !ln.eol && Math.abs(ln.y1 - it.y1) < it.size * 0.5 && it.x0 - ln.x1 < it.size * 2.5 && it.x0 > ln.x0 - 1) {
+      ln.items.push(it); ln.x1 = Math.max(ln.x1, it.x1); ln.y0 = Math.min(ln.y0, it.y0); ln.y1 = Math.max(ln.y1, it.y1); ln.eol = it.eol;
+    } else lines.push({ items: [it], x0: it.x0, x1: it.x1, y0: it.y0, y1: it.y1, size: it.size, eol: it.eol });
+  }
+  const blocks = [];
+  for (const ln of lines) {
+    const b = blocks.at(-1);
+    const overlapX = b && Math.min(b.x1, ln.x1) - Math.max(b.x0, ln.x0) > -ln.size;
+    const gap = b ? ln.y0 - b.lastY1 : 0;
+    const maxGap = b && b.gaps.length ? median(b.gaps) + ln.size * 0.3 : ln.size * 0.9;   // a bigger gap = new paragraph
+    if (b && overlapX && gap < maxGap && ln.y0 >= b.lastY0 && Math.abs(b.size - ln.size) < 1.2 && Math.abs(b.x0 - ln.x0) < (b.x1 - b.x0) * 0.6 + 5) {
+      b.lines.push(ln); b.gaps.push(gap); b.x0 = Math.min(b.x0, ln.x0); b.x1 = Math.max(b.x1, ln.x1); b.y1 = Math.max(b.y1, ln.y1); b.lastY0 = ln.y0; b.lastY1 = ln.y1;
+    } else blocks.push({ page: pno, lines: [ln], gaps: [], x0: ln.x0, x1: ln.x1, y0: ln.y0, y1: ln.y1, lastY0: ln.y0, lastY1: ln.y1, size: ln.size });
+  }
+  let lineId = 0;
+  for (const b of blocks) {           // block text + a char -> (line, rect) map for highlighting
+    let text = ""; const map = []; let bold = 0, total = 0;
+    b.lines.forEach((ln, li) => {
+      const lid = pno * 100000 + lineId++;
+      if (text) {
+        if (/[A-Za-z]-$/.test(text) && /^[a-z]/.test(ln.items[0].str)) { text = text.slice(0, -1); map.pop(); }
+        else { text += " "; map.push(null); }
+      }
+      ln.items.forEach((it, k) => {
+        if (k && !/\s$/.test(text) && !/^\s/.test(it.str) && it.x0 - ln.items[k - 1].x1 > it.size * 0.15) { text += " "; map.push(null); }
+        const n = it.str.length;
+        for (let i = 0; i < n; i++) map.push({ lid, it, i, n });
+        text += it.str; total += n; if (it.bold) bold += n;
+      });
+    });
+    b.text = text; b.map = map; b.bold = bold / Math.max(1, total) > 0.6;
+    b.size = median(b.lines.map((l) => l.size));
+  }
+  return blocks;
+}
+const median = (a) => { const s = [...a].sort((x, y) => x - y); return s[Math.floor(s.length / 2)] || 10; };
+
+function readingOrder(blocks, W) {
+  if (blocks.length < 3) return blocks.sort((a, b) => a.y0 - b.y0 || a.x0 - b.x0);
+  const mid = W / 2, narrow = blocks.filter((b) => b.x1 - b.x0 < 0.55 * W);
+  const left = narrow.filter((b) => b.x1 <= mid + 0.05 * W), right = narrow.filter((b) => b.x0 >= mid - 0.05 * W);
+  if (left.length < 2 || right.length < 2) return blocks.sort((a, b) => Math.round(a.y0) - Math.round(b.y0) || a.x0 - b.x0);
+  const full = blocks.filter((b) => !left.includes(b) && !right.includes(b)).sort((a, b) => a.y0 - b.y0);
+  const cuts = [-1e9, ...full.map((b) => b.y0), 1e9], out = [], used = new Set();
+  for (let i = 0; i < cuts.length - 1; i++) {
+    if (i > 0) out.push(full[i - 1]);
+    for (const col of [left, right]) for (const b of [...col].sort((a, c) => a.y0 - c.y0))
+      if (!used.has(b) && b.y0 >= cuts[i] && b.y0 < cuts[i + 1]) { out.push(b); used.add(b); }
+  }
+  return out;
+}
+
+// ---------- figures: images and substantial vector drawings, located from the page's drawing instructions ----------
+async function pageFigures(pdfjs, page, vp, items) {
+  const { OPS, Util } = pdfjs; const ol = await page.getOperatorList();
+  let ctm = [1, 0, 0, 1, 0, 0]; const stack = []; const imgs = [], paths = [];
+  const box = (m, x0, y0, x1, y1) => { const pts = [[x0, y0], [x1, y0], [x0, y1], [x1, y1]].map((q) => Util.applyTransform(q, Util.transform(vp.transform, m)));
+    const xs = pts.map((q) => q[0]), ys = pts.map((q) => q[1]); return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)]; };
+  for (let i = 0; i < ol.fnArray.length; i++) {
+    const fn = ol.fnArray[i], a = ol.argsArray[i];
+    if (fn === OPS.save) stack.push(ctm);
+    else if (fn === OPS.restore) ctm = stack.pop() || ctm;
+    else if (fn === OPS.transform) ctm = Util.transform(ctm, a);
+    else if (fn === OPS.paintFormXObjectBegin) { stack.push(ctm); if (a?.[0]) ctm = Util.transform(ctm, a[0]); }
+    else if (fn === OPS.paintFormXObjectEnd) ctm = stack.pop() || ctm;
+    else if (fn === OPS.paintImageXObject || fn === OPS.paintInlineImageXObject || fn === OPS.paintImageMaskXObject || fn === OPS.paintImageXObjectRepeat) imgs.push(box(ctm, 0, 0, 1, 1));
+    else if (fn === OPS.constructPath) { const mm = a?.[2]; if (mm && mm.length === 4 && isFinite(mm[0])) paths.push(box(ctm, mm[0], mm[1], mm[2], mm[3])); }
+  }
+  const W = vp.width, H = vp.height, area = (r) => Math.max(0, r[2] - r[0]) * Math.max(0, r[3] - r[1]);
+  const inter = (a, b) => area([Math.max(a[0], b[0]), Math.max(a[1], b[1]), Math.min(a[2], b[2]), Math.min(a[3], b[3])]);
+  const near = (a, b, g) => a[0] - g < b[2] && b[0] - g < a[2] && a[1] - g < b[3] && b[1] - g < a[3];
+  const textCover = (r) => items.reduce((n, it) => n + inter(r, [it.x0, it.y0, it.x1, it.y1]), 0) / Math.max(1, area(r));
+  const clip = (r) => [Math.max(0, r[0]), Math.max(0, r[1]), Math.min(W, r[2]), Math.min(H, r[3])];
+  // raster images: skip icons/specks and full-page backgrounds (scans are handled by OCR)
+  let figs = imgs.map(clip).filter((r) => r[2] - r[0] > 24 && r[3] - r[1] > 24 && area(r) < 0.92 * W * H).map((r) => ({ r, vec: false }));
+  // vector drawings: cluster nearby shapes; keep big clusters that are drawings rather than boxes around text
+  const shapes = paths.map(clip).filter((r) => (r[2] - r[0] > 2 || r[3] - r[1] > 2) && area(r) < 0.95 * W * H);
+  const clusters = [];
+  for (const r of shapes) {
+    let c = clusters.find((c) => near(c, r, 6));
+    if (c) { c[0] = Math.min(c[0], r[0]); c[1] = Math.min(c[1], r[1]); c[2] = Math.max(c[2], r[2]); c[3] = Math.max(c[3], r[3]); c.n++; }
+    else { c = [...r]; c.n = 1; clusters.push(c); }
+  }
+  for (let again = true; again;) { again = false;              // merge clusters that grew into each other
+    for (let i = 0; i < clusters.length; i++) for (let j = i + 1; j < clusters.length; j++) if (near(clusters[i], clusters[j], 6)) {
+      const a = clusters[i], b = clusters.splice(j, 1)[0]; a[0] = Math.min(a[0], b[0]); a[1] = Math.min(a[1], b[1]); a[2] = Math.max(a[2], b[2]); a[3] = Math.max(a[3], b[3]); a.n += b.n; again = true; break; } }
+  for (const c of clusters) {
+    const w = c[2] - c[0], h = c[3] - c[1];
+    if (w < 60 || h < 40 || c.n < 3) continue;                       // rules, underlines, single boxes
+    const withImg = figs.find((f) => inter(f.r, c) > 0.5 * Math.min(area(f.r), area(c)));
+    if (withImg) { withImg.r = [Math.min(withImg.r[0], c[0]), Math.min(withImg.r[1], c[1]), Math.max(withImg.r[2], c[2]), Math.max(withImg.r[3], c[3])]; continue; }
+    if (textCover(c) > 0.25) continue;                               // a table or a text box: keep it as text
+    figs.push({ r: [c[0], c[1], c[2], c[3]], vec: true });
+  }
+  // merge overlapping figures, pad slightly
+  figs.sort((a, b) => a.r[1] - b.r[1]);
+  const out = [];
+  for (const f of figs) { const o = out.find((g) => inter(g.r, f.r) > 0.3 * Math.min(area(g.r), area(f.r)));
+    if (o) { o.r = [Math.min(o.r[0], f.r[0]), Math.min(o.r[1], f.r[1]), Math.max(o.r[2], f.r[2]), Math.max(o.r[3], f.r[3])]; o.vec = o.vec && f.vec; } else out.push(f); }
+  // charts: take in short labels hugging the drawing (axis numbers, category names, titles)
+  for (const f of out.filter((f) => f.vec)) {
+    for (let grew = true; grew;) { grew = false;
+      for (const it of items) {
+        const r = [it.x0, it.y0, it.x1, it.y1];
+        const t = it.str.trim();
+        if (t.length > 30 || /^(fig(ure)?|table|chart|graph|source|note|photo|plate|map)\b/i.test(t) || (t.split(/\s+/).length >= 3 && /[.!?]$/.test(t)) || inter(f.r, r) >= 0.9 * area(r) || !near(f.r, r, Math.max(10, it.size * 1.4))) continue;
+        f.r = [Math.min(f.r[0], r[0]), Math.min(f.r[1], r[1]), Math.max(f.r[2], r[2]), Math.max(f.r[3], r[3])]; grew = true;
+      }
+    }
+  }
+  const pad = (f) => (f.vec ? 3 : 0);                                  // photos are cropped exactly; drawings get a little air
+  return out.map((f) => ({ ...f, r: clip([f.r[0] - pad(f), f.r[1] - pad(f), f.r[2] + pad(f), f.r[3] + pad(f)]).map((v) => Math.round(v * 10) / 10) }));
+}
+
+const normKey = (t) => t.trim().toLowerCase().replace(/\s+/g, " ").replace(/\d+/g, "#");
+
+async function extractPdf(pdfjs, data, { onProgress, ocr } = {}) {
+  const pdf = await pdfjs.getDocument({ data: data.slice(0), isEvalSupported: false }).promise;
+  const pages = [], sizes = [], ocrPages = [], pageItems = [], pageFigs = [];
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const page = await pdf.getPage(p); const vp = page.getViewport({ scale: 1 });
+    sizes.push([Math.round(vp.width * 10) / 10, Math.round(vp.height * 10) / 10]);
+    let items = itemsFromText(await page.getTextContent(), vp);
+    if (items.reduce((n, it) => n + it.str.trim().length, 0) < 25 && ocr) {
+      onProgress?.(`Scanning page ${p} with OCR…`);
+      try { items = await ocr(page, vp); if (items.length) ocrPages.push(p); } catch (e) { console.warn("OCR failed", e); }
+    }
+    let figs = [];
+    if (!ocrPages.includes(p)) {
+      try { figs = await pageFigures(pdfjs, page, vp, items); } catch (e) { console.warn("figure scan failed on page", p, e); }
+      const inside = (it, r) => { const cx = (it.x0 + it.x1) / 2, cy = (it.y0 + it.y1) / 2; return cx > r[0] && cx < r[2] && cy > r[1] && cy < r[3]; };
+      items = items.filter((it) => !figs.some((f) => inside(it, f.r)));     // labels inside charts/photos are not read
+    }
+    pageFigs.push(figs);
+    pageItems.push(items);
+    onProgress?.(`Reading page ${p} of ${pdf.numPages}…`);
+  }
+  // fonts embedded without a character map come out garbled: decode them before building paragraphs
+  const repairedFonts = fixFontEncoding(pageItems.flat(), (m) => { console.info("[pdf] " + m); onProgress?.(m); });
+  pageItems.forEach((items, i) => pages.push(readingOrder(buildBlocks(items, i), sizes[i][0])));
+  // running headers / footers / page numbers
+  const n = pages.length, counts = new Map();
+  pages.forEach((bs, i) => { const H = sizes[i][1]; const seen = new Set();
+    for (const b of bs) if (b.y1 < H * EDGE || b.y0 > H * (1 - EDGE)) { const k = normKey(b.text); if (!seen.has(k)) { seen.add(k); counts.set(k, (counts.get(k) || 0) + 1); } } });
+  pages.forEach((bs, i) => { const H = sizes[i][1];
+    pages[i] = bs.filter((b) => { const edge = b.y1 < H * EDGE || b.y0 > H * (1 - EDGE); const t = b.text.trim().toLowerCase();
+      return !(edge && ((n >= 2 && (counts.get(normKey(b.text)) || 0) >= Math.max(2, 0.4 * n)) || /^(page\s*)?[\divxlc]+(\s*(of|\/)\s*\d+)?$/.test(t))); }); });
+  // classify by font size
+  const sz = new Map(); for (const bs of pages) for (const b of bs) sz.set(b.size, (sz.get(b.size) || 0) + b.text.length);
+  const body = [...sz.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || 10;
+  pages.forEach((bs, i) => { const H = sizes[i][1];
+    for (const b of bs) { const t = b.text.trim(), short = t.length < 160 && !/[.!?:;,]$/.test(t);
+      b.kind = b.size >= body * 1.18 && t.length < 250 ? "heading" : b.bold && short && t.length < 120 ? "heading"
+        : /^(chapter|section|part|appendix)\s+[\dIVXLC]+\b/i.test(t) && short ? "heading"
+        : b.size <= body * 0.88 && b.y0 > H * 0.55 ? "footnote" : b.size <= body * 0.88 && /^(fig(ure)?|table)\.?\s*\d/i.test(t) ? "caption" : "para"; }
+    pages[i] = [...bs.filter((b) => b.kind !== "footnote"), ...bs.filter((b) => b.kind === "footnote")]; });
+  // put figures where they sit in the reading flow: before the first block below them in the same column
+  pages.forEach((bs, i) => {
+    for (const f of pageFigs[i]) {
+      const [x0, y0, x1, y1] = f.r, fig = { kind: "figure", page: i, x0, y0, x1, y1, text: "", map: [], fig: f };
+      const sameCol = (b) => Math.min(b.x1, x1) - Math.max(b.x0, x0) > 0.3 * Math.min(x1 - x0, b.x1 - b.x0);
+      let at = bs.findIndex((b) => b.kind !== "footnote" && b.kind !== "figure" && sameCol(b) && b.y0 >= y0 - 2);
+      if (at < 0) { at = bs.findIndex((b) => b.kind === "footnote"); if (at < 0) at = bs.length; }
+      bs.splice(at, 0, fig);
+    }
+  });
+  // join paragraphs split by a column or page break
+  const flat = [];
+  for (const b of pages.flat()) {
+    if (b.kind === "para") {
+      let j = flat.length - 1; while (j >= 0 && (flat[j].kind === "footnote" || flat[j].kind === "caption" || flat[j].kind === "figure")) j--;
+      const prev = flat[j];
+      if (prev && prev.kind === "para" && !/[.!?:"”')\]]$/.test(prev.text.trimEnd()) && /^[a-z0-9(\[]/.test(b.text.trimStart())) {
+        if (/[A-Za-z]-$/.test(prev.text)) { prev.text = prev.text.slice(0, -1); prev.map.pop(); } else { prev.text += " "; prev.map.push(null); }
+        prev.text += b.text; prev.map.push(...b.map); continue;
+      }
+    }
+    flat.push(b);
+  }
+  // sentences + highlight rectangles
+  const blocks = []; let sid = 0;
+  flat.forEach((b, bi) => {
+    if (b.kind === "figure") { blocks.push({ id: bi, kind: "figure", page: b.page, rect: b.fig.r, vector: b.fig.vec, sentences: [] }); return; }
+    const sents = [];
+    for (const [a, z] of splitSentences(b.text)) {
+      const seg = b.text.slice(a, z).trim(); if (!seg || !/\w/.test(seg)) continue;
+      sents.push({ id: sid++, text: seg, rects: rectsFor(b.map.slice(a, z), b.page) });
+    }
+    if (sents.length) blocks.push({ id: bi, kind: b.kind, page: b.page, sentences: sents });
+  });
+  return { title: (await pdf.getMetadata().catch(() => ({}))).info?.Title?.trim() || "", pages: pdf.numPages, page_sizes: sizes, ocr_pages: ocrPages, repaired_fonts: repairedFonts, figures: blocks.filter((b) => b.kind === "figure").length, blocks, sentence_count: sid };
+}
+
+function rectsFor(map, page) {
+  const byLine = new Map();
+  for (const m of map) {
+    if (!m) continue; const { it, i, n } = m;
+    const w = it.x1 - it.x0, x0 = it.x0 + (w * i) / n, x1 = it.x0 + (w * (i + 1)) / n;
+    const r = byLine.get(m.lid);
+    if (!r) byLine.set(m.lid, [page, x0, it.y0, x1, it.y1]);
+    else { r[1] = Math.min(r[1], x0); r[2] = Math.min(r[2], it.y0); r[3] = Math.max(r[3], x1); r[4] = Math.max(r[4], it.y1); }
+  }
+  return [...byLine.values()].map((r) => r.map((v, k) => (k ? Math.round(v * 10) / 10 : v)));
+}
+
+// OCR helper factory (tesseract.js); words become items in PDF points
+function makeOcr(getTesseract) {
+  let worker = null;
+  return async (page, vp) => {
+    const T = await getTesseract();
+    worker = worker || (await T.createWorker("eng"));
+    const scale = 300 / 72, v = page.getViewport({ scale });
+    const canvas = document.createElement("canvas"); canvas.width = v.width; canvas.height = v.height;
+    await page.render({ canvasContext: canvas.getContext("2d"), viewport: v }).promise;
+    const { data } = await worker.recognize(canvas, {}, { blocks: true });
+    const items = [];
+    for (const blk of data.blocks || []) for (const par of blk.paragraphs) for (const line of par.lines) {
+      const h = (line.bbox.y1 - line.bbox.y0) / scale;
+      line.words.forEach((w, k) => items.push({ str: w.text, x0: w.bbox.x0 / scale, x1: w.bbox.x1 / scale, y0: w.bbox.y0 / scale, y1: w.bbox.y1 / scale,
+        size: h * 0.8, bold: false, eol: k === line.words.length - 1 }));
+    }
+    return items;
+  };
+}
+
+// ===== Browser-only back end: storage, voice engine (Kokoro in a Web Worker), and a local "API" =====
+const KOKORO_URL = "https://cdn.jsdelivr.net/npm/kokoro-js@1.2.1/dist/kokoro.web.js";
+const PDFJS_URL = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.min.mjs";
+const PDFJS_WORKER = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs";
+const TESS_URL = "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js";
+const MODEL = "onnx-community/Kokoro-82M-v1.0-ONNX";
+const SR = 24000;
+
+const VOICE_INFO = { af_heart: ["Heart", "US", "F", 1], af_bella: ["Bella", "US", "F", 1], af_nicole: ["Nicole", "US", "F", 2], af_aoede: ["Aoede", "US", "F", 2],
+  af_kore: ["Kore", "US", "F", 2], af_sarah: ["Sarah", "US", "F", 2], af_nova: ["Nova", "US", "F", 3], af_alloy: ["Alloy", "US", "F", 3], af_sky: ["Sky", "US", "F", 3],
+  af_jessica: ["Jessica", "US", "F", 3], af_river: ["River", "US", "F", 3], am_michael: ["Michael", "US", "M", 2], am_fenrir: ["Fenrir", "US", "M", 2],
+  am_puck: ["Puck", "US", "M", 2], am_echo: ["Echo", "US", "M", 3], am_eric: ["Eric", "US", "M", 3], am_liam: ["Liam", "US", "M", 3], am_onyx: ["Onyx", "US", "M", 3],
+  am_adam: ["Adam", "US", "M", 3], am_santa: ["Santa", "US", "M", 3], bf_emma: ["Emma", "UK", "F", 2], bf_isabella: ["Isabella", "UK", "F", 2],
+  bf_alice: ["Alice", "UK", "F", 3], bf_lily: ["Lily", "UK", "F", 3], bm_george: ["George", "UK", "M", 2], bm_fable: ["Fable", "UK", "M", 2],
+  bm_lewis: ["Lewis", "UK", "M", 3], bm_daniel: ["Daniel", "UK", "M", 3] };
+// Enhanced male voices: blends tuned to match the quality of the best female voices
+const PRESETS = { x_marcus: "am_michael:40,am_fenrir:30,am_puck:30", x_oliver: "bm_fable:45,bm_george:40,bf_emma:15", x_arthur: "bm_george:50,bm_fable:50" };
+VOICE_INFO.x_marcus = ["Marcus", "US", "M", 1]; VOICE_INFO.x_oliver = ["Oliver", "UK", "M", 1]; VOICE_INFO.x_arthur = ["Arthur", "UK", "M", 1];
+const DEFAULT_VOICE = "af_heart";
+const SPEED_BUCKETS = [0.75, 1, 1.25, 1.5, 1.75, 2];
+const bucket = (r) => SPEED_BUCKETS.reduce((a, b) => (Math.abs(b - Math.min(r, 2)) < Math.abs(a - Math.min(r, 2)) ? b : a));
+
+// ---------- tiny IndexedDB wrapper ----------
+const idb = (() => {
+  let dbp;
+  const open = () => (dbp ||= new Promise((res, rej) => {
+    const r = indexedDB.open("reader", 1);
+    r.onupgradeneeded = () => { for (const s of ["clips", "docs", "pdfs", "kv"]) r.result.createObjectStore(s); };
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+  }));
+  const tx = async (store, mode, fn) => { const db = await open(); return new Promise((res, rej) => {
+    const t = db.transaction(store, mode), s = t.objectStore(store), req = fn(s); t.oncomplete = () => res(req?.result); t.onerror = () => rej(t.error); }); };
+  return { get: (s, k) => tx(s, "readonly", (o) => o.get(k)), put: (s, k, v) => tx(s, "readwrite", (o) => o.put(v, k)),
+    del: (s, k) => tx(s, "readwrite", (o) => o.delete(k)), all: (s) => tx(s, "readonly", (o) => o.getAll()),
+    has: (s, k) => tx(s, "readonly", (o) => o.getKey(k)).then((x) => x !== undefined) };
+})();
+
+// stable 128-bit-ish hash (works on file:// where crypto.subtle may be missing)
+function hash(str) {
+  let h1 = 0xdeadbeef, h2 = 0x41c6ce57, h3 = 0x9e3779b9, h4 = 0x85ebca6b;
+  for (let i = 0; i < str.length; i++) { const c = str.charCodeAt(i);
+    h1 = Math.imul(h1 ^ c, 2654435761); h2 = Math.imul(h2 ^ c, 1597334677); h3 = Math.imul(h3 ^ c, 2246822507); h4 = Math.imul(h4 ^ c, 3266489909); }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  h3 = Math.imul(h3 ^ (h3 >>> 16), 2246822507) ^ Math.imul(h4 ^ (h4 >>> 13), 3266489909);
+  h4 = Math.imul(h4 ^ (h4 >>> 16), 2246822507) ^ Math.imul(h3 ^ (h3 >>> 13), 3266489909);
+  return [h1, h2, h3, h4].map((h) => (h >>> 0).toString(16).padStart(8, "0")).join("");
+}
+function hashBytes(buf) { const u = new Uint8Array(buf); let s = ""; const step = Math.max(1, Math.floor(u.length / 200000));
+  for (let i = 0; i < u.length; i += step) s += String.fromCharCode(u[i]); return hash(s + u.length); }
+
+// ---------- voice engine: Kokoro-82M in a Web Worker (WebGPU when available, else WebAssembly) ----------
+const WORKER_SRC = `
+let KokoroTTS = null, tts = null, device = null;
+const voices = new Map();
+async function voiceData(n) {
+  if (!voices.has(n)) { const r = await fetch("https://huggingface.co/${MODEL}/resolve/main/voices/" + n + ".bin"); voices.set(n, new Float32Array(await r.arrayBuffer())); }
+  return voices.get(n);
+}
+async function load(dev, dtype) {
+  if (!KokoroTTS) KokoroTTS = (await import("${KOKORO_URL}")).KokoroTTS;
+  tts = await KokoroTTS.from_pretrained("${MODEL}", { dtype, device: dev, progress_callback: (p) => {
+    if (p.status === "progress" && p.total > 1e6) postMessage({ type: "progress", file: p.file, loaded: p.loaded, total: p.total }); } });
+  device = dev;
+}
+async function synth(text, voice, speed) {
+  const parts = voice.split(",").map((x) => { const [n, w] = x.split(":"); return [n, w ? +w : 1]; });
+  const total = parts.reduce((a, p) => a + p[1], 0);
+  if (parts.length === 1) return (await tts.generate(text, { voice: parts[0][0], speed })).audio;
+  const datas = await Promise.all(parts.map(([n]) => voiceData(n)));
+  const mix = new Float32Array(datas[0].length);
+  parts.forEach(([, w], i) => { const d = datas[i]; for (let k = 0; k < mix.length; k++) mix[k] += (w / total) * d[k]; });
+  const orig = tts.generate_from_ids;
+  tts.generate_from_ids = async (ids, { speed: sp = 1 } = {}) => {
+    const T = ids.constructor, L = 256 * Math.min(Math.max(ids.dims.at(-1) - 2, 0), 509);
+    const { waveform } = await tts.model({ input_ids: ids, style: new T("float32", mix.slice(L, L + 256), [1, 256]), speed: new T("float32", [sp], [1]) });
+    return { audio: waveform.data, sampling_rate: 24000 };
+  };
+  try { return (await tts.generate(text, { voice: parts[0][0], speed })).audio; } finally { tts.generate_from_ids = orig; }
+}
+self.onmessage = async ({ data: m }) => {
+  try {
+    if (m.type === "init") {
+      const within = (p, ms, what) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error(what + " timed out")), ms))]);
+      if (m.device === "webgpu") {
+        await load("webgpu", "fp32");
+        const a = await within(synth("Testing one two three.", "af_heart", 1), 30000, "graphics card test");
+        if (!a.length || a.some((x) => Number.isNaN(x))) throw new Error("graphics card produced bad audio");
+      } else await load("wasm", m.dtype || "q8");
+      const t = performance.now(); const a = await synth("This is a short test of the voice engine.", "af_heart", 1);
+      postMessage({ type: "ready", device, rtf: (performance.now() - t) / 1000 / (a.length / 24000) });
+    } else if (m.type === "synth") {
+      const t = performance.now(); const audio = await synth(m.text, m.voice, m.speed);
+      postMessage({ type: "done", id: m.id, audio, ms: performance.now() - t }, [audio.buffer]);
+    }
+  } catch (e) { postMessage({ type: "error", id: m.id, error: String(e && e.message || e) }); }
+};`;
+
+// Runs the worker code on the page when Web Workers are unavailable (Chrome blocks them for files opened from disk).
+class InlineWorker {
+  constructor(src) {
+    this.inline = true; this.onmessage = null; this.onerror = null; this._q = [];
+    const bridge = (window.__voiceBridge = { post: (d) => setTimeout(() => this.onmessage?.({ data: d })), handler: null });
+    const code = src.replace(/postMessage\(/g, "__voiceBridge.post(").replace("self.onmessage = async", "__voiceBridge.handler = async");
+    import(URL.createObjectURL(new Blob([code], { type: "text/javascript" })))
+      .then(() => { this._ready = true; this._q.splice(0).forEach((d) => bridge.handler({ data: d })); })
+      .catch((e) => this.onerror?.({ message: "could not load the voice engine: " + e.message }));
+    this._bridge = bridge;
+  }
+  postMessage(d) { this._ready ? this._bridge.handler({ data: d }) : this._q.push(d); }
+  terminate() {}
+}
+
+const engine = {
+  worker: null, ready: null, info: { status: "starting", device: null, rtf: null, progress: null },
+  jobs: new Map(), queue: [], busy: false, seq: 0, waiters: new Map(), generated: 0,
+  start() {
+    if (this.ready) return this.ready;
+    this.ready = (async () => {
+      const pref = localStorage.getItem("reader.device") || "auto";
+      let gpu = false;
+      if (pref !== "wasm" && navigator.gpu) {
+        try {
+          const ad = await Promise.race([navigator.gpu.requestAdapter({ powerPreference: "high-performance" }), new Promise((r) => setTimeout(() => r(null), 4000))]);
+          const info = ad?.info || {};
+          gpu = !!ad && !ad.isFallbackAdapter && !/swiftshader|llvmpipe|software|microsoft basic/i.test(`${info.vendor} ${info.architecture} ${info.description}`);
+        } catch (e) {}
+      }
+      if (gpu) {
+        try { await this.boot("webgpu"); return; }
+        catch (e) { console.warn("[voice] graphics card not usable:", e.message, "- using the processor"); this.worker?.terminate(); }
+      }
+      await this.boot("wasm");
+    })();
+    return this.ready;
+  },
+  boot(device, inline = false) {
+    return new Promise((resolve, reject) => {
+      if (inline) this.worker = new InlineWorker(WORKER_SRC);
+      else {
+        const url = URL.createObjectURL(new Blob([WORKER_SRC], { type: "text/javascript" }));
+        try { this.worker = new Worker(url); } catch (e) { this.worker = new InlineWorker(WORKER_SRC); }
+      }
+      const files = {};
+      this.info.status = "starting";
+      this.worker.onmessage = ({ data: m }) => {
+        if (m.type === "progress") { files[m.file] = [m.loaded, m.total]; const v = Object.values(files);
+          this.info.progress = v.reduce((a, x) => a + x[0], 0) / v.reduce((a, x) => a + x[1], 0); this.info.status = "downloading"; }
+        else if (m.type === "ready") { Object.assign(this.info, { status: "ready", device: m.device, rtf: m.rtf, progress: null }); resolve(); this.pump(); }
+        else if (m.type === "error" && m.id === undefined) reject(new Error(m.error));
+        else if (m.type === "done" || m.type === "error") { const w = this.waiters.get(m.id); this.waiters.delete(m.id); m.type === "done" ? w?.res(m) : w?.rej(new Error(m.error)); }
+      };
+      this.worker.onerror = (e) => {
+        if (!inline && !this.worker.inline) {   // e.g. opened from a file: run the engine on the page instead
+          console.warn("[voice] background thread unavailable, running on the page"); this.worker.terminate?.();
+          this.boot(device, true).then(resolve, reject); return;
+        }
+        this.info.status = "error: " + (e.message || "failed"); reject(new Error(e.message || "voice engine failed"));
+      };
+      this.worker.postMessage({ type: "init", device, dtype: localStorage.getItem("reader.dtype") || "q8" });
+    });
+  },
+  // queue a clip; lower priority number = sooner
+  request(key, text, voice, speed, priority) {
+    let j = this.jobs.get(key);
+    if (j) { j.priority = Math.min(j.priority, priority); return j.promise; }
+    j = { key, text, voice, speed, priority, seq: this.seq++ };
+    j.promise = new Promise((res, rej) => { j.res = res; j.rej = rej; });
+    this.jobs.set(key, j); this.queue.push(j); this.pump();
+    return j.promise;
+  },
+  dropPrefetch() { this.queue = this.queue.filter((j) => { if (j.priority >= 10) { this.jobs.delete(j.key); j.rej(new Error("cancelled")); return false; } return true; }); },
+  async pump() {
+    if (this.busy || this.info.status !== "ready" || !this.queue.length) return;
+    this.queue.sort((a, b) => a.priority - b.priority || a.seq - b.seq);
+    const j = this.queue.shift(); this.busy = true;
+    try {
+      if (await idb.has("clips", j.key)) { j.res(); }
+      else {
+        const id = ++this.seq; const r = await new Promise((res, rej) => { this.waiters.set(id, { res, rej });
+          this.worker.postMessage({ type: "synth", id, text: j.text, voice: j.voice, speed: j.speed }); });
+        const audio = trim(r.audio), blob = wav(audio);
+        await idb.put("clips", j.key, { blob, seconds: audio.length / SR, gen: r.ms / 1000, created: Date.now() });
+        bumpStats(audio.length / SR, r.ms / 1000, blob.size); this.generated++;
+        j.res();
+      }
+    } catch (e) { j.rej(e); }
+    finally { this.jobs.delete(j.key); this.busy = false; this.pump(); }
+  },
+};
+
+function trim(a, th = 0.01, keep = 0.03) {
+  let s = 0, e = a.length - 1; while (s < a.length && Math.abs(a[s]) < th) s++; while (e > s && Math.abs(a[e]) < th) e--;
+  const k = Math.floor(keep * SR); return a.subarray(Math.max(0, s - k), Math.min(a.length, e + k));
+}
+function wav(f32) {
+  const b = new ArrayBuffer(44 + f32.length * 2), v = new DataView(b), w = (o, s) => [...s].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+  w(0, "RIFF"); v.setUint32(4, 36 + f32.length * 2, true); w(8, "WAVE"); w(12, "fmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, SR, true); v.setUint32(28, SR * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, "data"); v.setUint32(40, f32.length * 2, true);
+  for (let i = 0; i < f32.length; i++) v.setInt16(44 + i * 2, Math.max(-1, Math.min(1, f32[i])) * 32767, true);
+  return new Blob([b], { type: "audio/wav" });
+}
+function stats() { try { return JSON.parse(localStorage.getItem("reader.stats")) || { clips: 0, seconds: 0, gen: 0, bytes: 0, hits: 0 }; } catch (e) { return { clips: 0, seconds: 0, gen: 0, bytes: 0, hits: 0 }; } }
+function bumpStats(sec, gen, bytes) { const s = stats(); s.clips++; s.seconds += sec; s.gen += gen; s.bytes += bytes; try { localStorage.setItem("reader.stats", JSON.stringify(s)); } catch (e) {} }
+
+// ---------- libraries loaded on demand ----------
+let pdfjsP, tessP;
+const getPdfjs = () => (pdfjsP ||= import(PDFJS_URL).then(async (m) => {
+  m.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
+  if (location.protocol === "file:") {       // background threads are blocked for files opened from disk: run pdf.js on the page
+    const w = await import(PDFJS_WORKER); globalThis.pdfjsWorker = w;
+  }
+  return m;
+}));
+const getTesseract = () => (tessP ||= new Promise((res, rej) => { const s = document.createElement("script"); s.src = TESS_URL; s.onload = () => res(window.Tesseract); s.onerror = rej; document.head.appendChild(s); }));
+const pdfCache = new Map();
+async function pdfDoc(id) {
+  if (!pdfCache.has(id)) pdfCache.set(id, (async () => { const pdfjs = await getPdfjs(); const data = await idb.get("pdfs", id); return pdfjs.getDocument({ data, isEvalSupported: false }).promise; })());
+  return pdfCache.get(id);
+}
+
+// ---------- documents ----------
+const docMem = new Map();
+const EXTRACT_VERSION = 3;   // 2 = repairs garbled fonts, 3 = figures; older imports are re-read automatically
+async function readPdf(data, name) {
+  const pdfjs = await getPdfjs();
+  const doc = await extractPdf(pdfjs, new Uint8Array(data), { onProgress: (t) => window.__busy?.(t), ocr: makeOcr(getTesseract) });
+  doc.title = doc.title || (name || "Document").replace(/\.pdf$/i, "");
+  return doc;
+}
+async function loadDoc(id) {
+  if (!docMem.has(id)) {
+    const r = await idb.get("docs", id); if (!r) throw httpErr(404);
+    if (r.is_pdf && (r.v || 1) < EXTRACT_VERSION) {
+      const data = await idb.get("pdfs", id);
+      if (data) { const title = r.doc.title; r.doc = await readPdf(data, title); r.doc.title = title; r.v = EXTRACT_VERSION; await idb.put("docs", id, strip(r)); }
+    }
+    docMem.set(id, r);
+  }
+  return docMem.get(id);
+}
+const httpErr = (s) => Object.assign(new Error(String(s)), { status: s });
+const lexicon = () => { try { return JSON.parse(localStorage.getItem("reader.lexicon")) || {}; } catch (e) { return {}; } };
+function spoken(rec, sid, voice, speed) {
+  const s = rec._index?.get(sid) || (rec._index = new Map(rec.doc.blocks.flatMap((b) => b.sentences.map((x) => [x.id, [b, x]])))).get(sid);
+  if (!s) throw httpErr(404);
+  const text = normalize(s[1].text, s[0].kind, lexicon());
+  return { key: hash(`kokoro-v1|${voice}|${speed}|${text}`), text };
+}
+const canonVoice = (spec) => {
+  const acc = new Map();   // expand presets into their underlying voices, then normalise weights
+  for (const [n, w] of String(spec).split(",").map((x) => x.split(":"))) {
+    if (!VOICE_INFO[n]) continue; const weight = +w || 1;
+    if (PRESETS[n]) for (const [m, v] of PRESETS[n].split(",").map((x) => x.split(":"))) acc.set(m, (acc.get(m) || 0) + (weight * +v) / 100);
+    else acc.set(n, (acc.get(n) || 0) + weight);
+  }
+  if (!acc.size) return DEFAULT_VOICE; if (acc.size === 1) return [...acc.keys()][0];
+  const tot = [...acc.values()].reduce((a, b) => a + b, 0);
+  return [...acc.entries()].sort((a, b) => b[1] - a[1]).map(([n, w]) => `${n}:${Math.round((w / tot) * 100)}`).join(",");
+};
+
+// ---------- the local API (same shapes as the Python server) ----------
+function resp(body, { status = 200, headers = {} } = {}) {
+  return { ok: status < 400, status, headers: { get: (k) => headers[k] ?? null }, json: async () => body, blob: async () => body };
+}
+async function localFetch(url, opts = {}) {
+  const u = new URL(url, "http://local"); const p = u.pathname, q = u.searchParams, method = (opts.method || "GET").toUpperCase();
+  const body = () => (typeof opts.body === "string" ? JSON.parse(opts.body) : opts.body);
+  let m;
+  try {
+    if (p === "/api/voices") return resp({ default: DEFAULT_VOICE, voices: Object.entries(VOICE_INFO).map(([id, [name, accent, gender, tier]]) => ({ id, name, accent, gender, tier, enhanced: !!PRESETS[id] }))
+      .sort((a, b) => a.tier - b.tier || a.accent.localeCompare(b.accent) || a.name.localeCompare(b.name)) });
+    if (p === "/api/docs" && method === "GET") {
+      const all = await idb.all("docs");
+      return resp(all.map((r) => { const lens = r.doc.blocks.flatMap((b) => b.sentences.map((s) => s.text.length));
+        return { id: r.id, title: r.doc.title, pages: r.doc.pages, sentences: r.doc.sentence_count, added: r.added / 1000, opened: (r.opened || r.added) / 1000,
+          pos: r.pos || 0, is_pdf: r.is_pdf, chars: lens.reduce((a, b) => a + b, 0), chars_left: lens.slice(r.pos || 0).reduce((a, b) => a + b, 0) }; })
+        .sort((a, b) => b.opened - a.opened));
+    }
+    if (p === "/api/upload") {
+      const file = body().get("file"); const data = await file.arrayBuffer(); const id = "p" + hashBytes(data).slice(0, 15);
+      const old = await idb.get("docs", id);
+      if (!old || (old.v || 1) < EXTRACT_VERSION) {
+        const doc = await readPdf(data, file.name);
+        await idb.put("pdfs", id, data);
+        await idb.put("docs", id, { id, doc, v: EXTRACT_VERSION, is_pdf: true, added: old?.added || Date.now(), opened: Date.now(), pos: old?.pos || 0 });
+        docMem.delete(id);
+      }
+      return resp({ id });
+    }
+    if (p === "/api/text") {
+      const { text, title } = body(); if (!text?.trim()) throw httpErr(400);
+      const id = "t" + hash(text).slice(0, 15); const doc = textDocument(text.trim(), title);
+      await idb.put("docs", id, { id, doc, is_pdf: false, added: Date.now(), opened: Date.now(), pos: 0 }); docMem.delete(id);
+      return resp({ id });
+    }
+    if ((m = p.match(/^\/api\/docs\/([\w-]+)$/))) {
+      if (method === "DELETE") { await idb.del("docs", m[1]); await idb.del("pdfs", m[1]); docMem.delete(m[1]); pdfCache.delete(m[1]); return resp({ ok: true }); }
+      const r = await loadDoc(m[1]); r.opened = Date.now(); idb.put("docs", r.id, strip(r));
+      return resp({ ...r.doc, id: r.id, is_pdf: r.is_pdf, progress: { pos: r.pos || 0, voice: r.voice, rate: r.rate } });
+    }
+    if ((m = p.match(/^\/api\/docs\/([\w-]+)\/progress$/))) {
+      const r = await loadDoc(m[1]); const b = body(); r.pos = b.pos; r.voice = b.voice ?? r.voice; r.rate = b.rate ?? r.rate; await idb.put("docs", r.id, strip(r)); return resp({ ok: true });
+    }
+    if ((m = p.match(/^\/api\/docs\/([\w-]+)\/page\/(\d+)\.png$/))) {
+      const pdf = await pdfDoc(m[1]); const page = await pdf.getPage(+m[2] + 1); const vp = page.getViewport({ scale: +(q.get("scale") || 1.5) });
+      const c = document.createElement("canvas"); c.width = vp.width; c.height = vp.height;
+      await page.render({ canvasContext: c.getContext("2d"), viewport: vp }).promise;
+      return resp(await new Promise((r) => c.toBlob(r, "image/png")));
+    }
+    if ((m = p.match(/^\/api\/audio\/([\w-]+)\/(\d+)$/))) {
+      const r = await loadDoc(m[1]); const voice = canonVoice(q.get("voice") || DEFAULT_VOICE), speed = bucket(+(q.get("speed") || 1));
+      const { key, text } = spoken(r, +m[2], voice, speed);
+      let clip = await idb.get("clips", key); const hit = !!clip; const t = performance.now();
+      if (!clip) { await engine.start(); await engine.request(key, text, voice, speed, 0); clip = await idb.get("clips", key); }
+      if (hit) { const s = stats(); s.hits++; try { localStorage.setItem("reader.stats", JSON.stringify(s)); } catch (e) {} }
+      return resp(clip.blob, { headers: { "X-Library": hit ? "hit" : "generated", "X-Gen-Ms": String(Math.round(performance.now() - t)) } });
+    }
+    if ((m = p.match(/^\/api\/prefetch\/([\w-]+)$/))) {
+      const r = await loadDoc(m[1]); const b = body(); const speed = bucket(b.speed || 1); engine.dropPrefetch(); engine.start();
+      b.sids.forEach((sid, i) => { const voice = canonVoice((b.voices && b.voices[i]) || b.voice); const { key, text } = spoken(r, sid, voice, speed);
+        engine.request(key, text, voice, speed, i < (b.soon ?? 3) ? 5 : 10).catch(() => {}); });
+      return resp({ queued: b.sids.length });
+    }
+    if (p === "/api/preview") {
+      const raw = q.get("voice") || DEFAULT_VOICE, voice = canonVoice(raw);
+      const names = raw.split(",").map((x) => VOICE_INFO[x.split(":")[0]]?.[0] || "Reader");
+      let text = q.get("text") || (names.length > 1 ? `Hi, we're a blend of ${names.join(" and ")}. We can read your documents aloud, at whatever pace suits you.`
+        : `Hi, I'm ${names[0]}. I can read your documents aloud, at whatever pace suits you.`);
+      text = normalize(text.slice(0, 300), "para", lexicon()); const key = hash(`kokoro-v1|${voice}|1|${text}`);
+      if (!(await idb.has("clips", key))) { await engine.start(); await engine.request(key, text, voice, 1, 0); }
+      return resp((await idb.get("clips", key)).blob);
+    }
+    if (p === "/api/lexicon") {
+      if (method === "PUT") { localStorage.setItem("reader.lexicon", JSON.stringify(body())); return resp({ ok: true }); }
+      return resp(lexicon());
+    }
+    if (p === "/api/stats") {
+      const s = stats(), e = engine.info;
+      return resp({ clips: s.clips, audio_hours: s.seconds / 3600, megabytes: Math.round(s.bytes / 1e5) / 10, reuse_hits: s.hits,
+        engine: { device: e.status === "ready" ? (e.device === "webgpu" ? "Graphics card" : "Processor") : e.status === "downloading" ? ((e.progress || 0) > 0.995 ? "Preparing voice…" : `Downloading voice ${Math.round((e.progress || 0) * 100)}%`) : e.status === "starting" ? "Starting…" : e.status,
+          workers: 1, speed_x_realtime: e.rtf ? Math.round((1 / e.rtf) * 10) / 10 : "…" } });
+    }
+    throw httpErr(404);
+  } catch (e) { console.error(e); return resp({ error: String(e.message || e) }, { status: e.status || 500 }); }
+}
+const strip = (r) => { const { _index, ...rest } = r; return rest; };
+const localUrl = async (url) => { const r = await localFetch(url); if (!r.ok) throw new Error(r.status); return URL.createObjectURL(await r.blob()); };
+
+// Reader front end.
+const $ = (s) => document.querySelector(s);
+const $$ = (s) => [...document.querySelectorAll(s)];
+const api = (p, o) => localFetch(p, o).then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); });
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const CPS = 15.5; // spoken characters per second at 1x, for time estimates
+
+// ---------- settings (persisted) ----------
+const DEF = { voice: null, blendOn: false, blendVoice: "bf_emma", blendMix: 30, rate: 1, secOn: false, secVoice: "am_michael",
+  secBy: "sentence", repeat: 1, pauseS: "natural", pauseP: "natural", volume: 100, skipNotes: true,
+  fontSize: 18, spacing: false, dys: false, dark: false, collapsed: false, nativeSpeed: true };
+let cfg = { ...DEF };
+try { Object.assign(cfg, JSON.parse(localStorage.getItem("reader.cfg") || "{}")); } catch (e) {}
+try { const th = new URLSearchParams(location.search).get("th"); if (!localStorage.getItem("reader.themeSet")) cfg.dark = th ? th === "dark" : matchMedia("(prefers-color-scheme: dark)").matches; } catch (e) {}
+const save = () => { try { localStorage.setItem("reader.cfg", JSON.stringify(cfg)); } catch (e) {} };
+
+const st = { doc: null, order: [], idx: 0, playing: false, token: 0, stopAt: null, view: "add", pageView: false,
+  clips: new Map(), sentEl: new Map(), info: new Map(), pageSents: new Map(), voices: [], vById: new Map(), chars: [], timerEnd: 0 };
+const audio = new Audio();
+audio.preservesPitch = true; audio.mozPreservesPitch = true; audio.webkitPreservesPitch = true;
+
+// ---------- voices ----------
+const COLORS = ["#1a6fe8", "#7a4fe0", "#d4497a", "#e07a1f", "#1b9a77", "#2f8fbf", "#9b59b6", "#c0392b"];
+const colorFor = (id) => COLORS[[...id].reduce((a, c) => a + c.charCodeAt(0), 0) % COLORS.length];
+const vName = (id) => st.vById.get(id)?.name || id;
+function primarySpec() {
+  return cfg.blendOn && cfg.blendVoice && cfg.blendVoice !== cfg.voice
+    ? `${cfg.voice}:${100 - cfg.blendMix},${cfg.blendVoice}:${cfg.blendMix}` : cfg.voice;
+}
+function voiceFor(i) {
+  if (!cfg.secOn) return primarySpec();
+  const inf = st.info.get(st.order[i]);
+  if (cfg.secBy === "paragraph") { const bi = st.doc.blocks.indexOf(inf.block); return bi % 2 ? cfg.secVoice : primarySpec(); }
+  return i % 2 ? cfg.secVoice : primarySpec();
+}
+function renderVoiceBtn(animate = false) {
+  const vb = $("#voiceBtn"), c = colorFor(cfg.voice);
+  vb.style.setProperty("--vc", cfg.blendOn ? "#7a4fe0" : c);
+  $("#voiceInitial").textContent = vName(cfg.voice)[0] || "V";
+  vb.classList.toggle("blend", !!cfg.blendOn);
+  vb.title = "Voice: " + (cfg.blendOn ? `${vName(cfg.voice)} + ${vName(cfg.blendVoice)}` : vName(cfg.voice));
+  if (animate) { vb.classList.remove("flip"); void vb.offsetWidth; vb.classList.add("flip"); }
+}
+let vFilter = "all", previewAudio = new Audio(), previewing = null, previewLoading = false;
+const I_PLAY = '<svg class="fill" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg>';
+const I_EQ = '<span class="eq"><i></i><i></i><i></i><i></i></span>';
+const I_CHECK = '<svg viewBox="0 0 24 24" class="ck"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+function buildVoiceList(animate = true) {
+  const ul = $("#voiceList"); ul.innerHTML = '<div id="vSel"></div>'; let i = 0;
+  for (const v of st.voices) {
+    if (vFilter !== "all" && v.accent !== vFilter && v.gender !== vFilter) continue;
+    const li = document.createElement("li"); li.dataset.id = v.id; li.style.setProperty("--i", i++); li.style.setProperty("--vc", colorFor(v.id));
+    if (animate) li.classList.add("in");
+    li.innerHTML = `<span class="av" style="background:${colorFor(v.id)}">${v.name[0]}</span>
+      <span class="vmeta"><b>${esc(v.name)}</b>${v.enhanced ? '<span class="badge enh">Enhanced</span>' : v.tier === 1 ? '<span class="badge">Best</span>' : ""}
+      <small>${v.accent === "US" ? "American" : "British"} English · ${v.gender === "F" ? "Female" : "Male"}</small></span>
+      <button class="pv" title="Preview ${esc(v.name)}">${I_PLAY}</button><span class="check">${I_CHECK}</span>`;
+    li.onclick = (e) => selectVoice(v.id, li, e);
+    li.querySelector(".pv").onclick = (e) => { e.stopPropagation(); preview(v.id); };
+    ul.appendChild(li);
+  }
+  $("#vCount").textContent = `${i} voice${i === 1 ? "" : "s"}`;
+  updateVoiceSel(false); updatePreviewUI(); renderBlend();
+  const cur = ul.querySelector("li.sel"); if (cur && animate) ul.scrollTop = Math.max(0, cur.offsetTop - ul.clientHeight / 2 + cur.offsetHeight / 2);
+}
+function updateVoiceSel(animate = true) {
+  const ul = $("#voiceList"), sel = $("#vSel"); if (!sel) return; let cur = null;
+  ul.querySelectorAll("li").forEach((li) => { const on = li.dataset.id === cfg.voice; li.classList.toggle("sel", on); if (on) cur = li; });
+  if (!cur) { sel.style.opacity = 0; return; }
+  sel.classList.toggle("instant", !animate);
+  Object.assign(sel.style, { opacity: 1, transform: `translateY(${cur.offsetTop}px)`, height: cur.offsetHeight + "px" });
+  sel.style.setProperty("--vc", colorFor(cfg.voice));
+  if (!animate) requestAnimationFrame(() => sel.classList.remove("instant"));
+}
+function selectVoice(id, li, e) {
+  const r = li.getBoundingClientRect(), rp = document.createElement("span");
+  rp.className = "ripple"; rp.style.left = e.clientX - r.left + "px"; rp.style.top = e.clientY - r.top + "px"; li.appendChild(rp); setTimeout(() => rp.remove(), 700);
+  li.classList.remove("picked"); void li.offsetWidth; li.classList.add("picked");
+  if (id === cfg.voice) return;
+  cfg.voice = id; if (cfg.blendVoice === id) cfg.blendOn = false; save();
+  updateVoiceSel(true); renderBlend(); voicesChanged(true);
+  toast(`Now reading with ${vName(id)}`);
+}
+function updatePreviewUI() {
+  $$("#voiceList li").forEach((li) => {
+    const on = previewing === li.dataset.id, pv = li.querySelector(".pv");
+    li.classList.toggle("previewing", on && !previewLoading);
+    pv.classList.toggle("loading", on && previewLoading); pv.classList.toggle("on", on);
+    const want = on && !previewLoading ? "eq" : on ? "load" : "play";
+    if (pv.dataset.state !== want) { pv.dataset.state = want; pv.innerHTML = want === "eq" ? I_EQ : want === "load" ? "" : I_PLAY; }
+  });
+  const bp = $("#blendPreview"); const on = previewing === primarySpec() && cfg.blendOn;
+  bp.classList.toggle("loading", on && previewLoading); bp.classList.toggle("on", on && !previewLoading);
+}
+function preview(spec) {
+  if (previewing === spec) { previewAudio.pause(); previewing = null; previewLoading = false; updatePreviewUI(); return; }
+  previewAudio.pause(); previewing = spec; previewLoading = true; updatePreviewUI();
+  previewAudio.playbackRate = 1;
+  localUrl(`/api/preview?voice=${encodeURIComponent(spec)}`).then((u) => {
+    if (previewing !== spec) return;
+    previewAudio.src = u; previewAudio.play().catch(() => {});
+  }).catch(() => { previewing = null; previewLoading = false; updatePreviewUI(); });
+  previewAudio.onplaying = () => { previewLoading = false; updatePreviewUI(); };
+  previewAudio.onended = previewAudio.onerror = () => { previewing = null; previewLoading = false; updatePreviewUI(); };
+}
+function renderBlend() {
+  $("#blendOn").checked = cfg.blendOn; $("#blendBox").classList.toggle("open", !!cfg.blendOn);
+  $("#blendVoice").value = cfg.blendVoice; $("#blendMix").value = cfg.blendMix;
+  $("#mixA").textContent = vName(cfg.voice); $("#mixB").textContent = vName(cfg.blendVoice);
+  const ca = colorFor(cfg.voice), cb = colorFor(cfg.blendVoice);
+  $("#mixAvA").textContent = vName(cfg.voice)[0]; $("#mixAvA").style.background = ca;
+  $("#mixAvB").textContent = vName(cfg.blendVoice)[0]; $("#mixAvB").style.background = cb;
+  $("#mixAvA").style.transform = `scale(${0.75 + (100 - cfg.blendMix) / 200})`; $("#mixAvB").style.transform = `scale(${0.75 + cfg.blendMix / 200})`;
+  const bm = $("#blendMix"); bm.style.setProperty("--ca", ca); bm.style.setProperty("--cb", cb); bm.style.setProperty("--m", cfg.blendMix + "%");
+  $("#mixLabel").textContent = `${100 - cfg.blendMix}% ${vName(cfg.voice)} · ${cfg.blendMix}% ${vName(cfg.blendVoice)}`;
+}
+function voicesChanged(animate = true) { renderVoiceBtn(animate); st.clips.clear(); if (st.playing) restart(true); else lastPrefetch = -99; }
+function moveFilterPill(animate = true) {
+  const on = $("#popVoice .filters button.on"), pill = $("#popVoice .fpill"); if (!on) return;
+  pill.classList.toggle("instant", !animate);
+  Object.assign(pill.style, { transform: `translateX(${on.offsetLeft}px)`, width: on.offsetWidth + "px" });
+  if (!animate) requestAnimationFrame(() => pill.classList.remove("instant"));
+}
+$$("#popVoice .filters button").forEach((b) => (b.onclick = () => {
+  if (vFilter === b.dataset.f) return;
+  vFilter = b.dataset.f; $$("#popVoice .filters button").forEach((x) => x.classList.toggle("on", x === b)); moveFilterPill(true); buildVoiceList(true);
+}));
+$("#blendOn").onchange = (e) => { cfg.blendOn = e.target.checked; if (cfg.blendVoice === cfg.voice) cfg.blendVoice = st.voices.find((v) => v.id !== cfg.voice).id; save(); renderBlend(); voicesChanged(true); };
+$("#blendVoice").onchange = (e) => { cfg.blendVoice = e.target.value; save(); renderBlend(); voicesChanged(true); };
+$("#blendMix").oninput = (e) => { cfg.blendMix = +e.target.value; renderBlend(); };
+$("#blendMix").onchange = () => { save(); voicesChanged(false); };
+$("#blendPreview").onclick = () => preview(primarySpec());
+
+// ---------- popovers ----------
+function hidePop(el) {
+  if (!el || el.hidden || el.classList.contains("closing")) return;
+  el.classList.add("closing"); setTimeout(() => { el.hidden = true; el.classList.remove("closing"); }, 140);
+}
+function openPop(id, anchor, align = "center") {
+  const p = $(id); const open = !p.hidden && !p.classList.contains("closing");
+  $$(".pop").forEach((x) => x !== p && hidePop(x));
+  if (open) { hidePop(p); return; }
+  p.classList.remove("closing");
+  p.hidden = false;
+  const r = anchor.getBoundingClientRect(), w = p.offsetWidth;
+  let left = align === "right" ? r.right - w : r.left + r.width / 2 - w / 2;
+  left = Math.max(10, Math.min(window.innerWidth - w - 10, left));
+  Object.assign(p.style, { left: left + "px", top: r.bottom + 8 + "px" });
+}
+$$(".pop .x").forEach((b) => (b.onclick = () => hidePop(b.closest(".pop"))));
+$$(".pop").forEach((p) => {
+  let y0 = null;
+  p.addEventListener("touchstart", (e) => { if (e.target.closest(".grip, .pophead, .tabs") || p.scrollTop <= 0 && e.target.closest(".grip")) y0 = e.touches[0].clientY; }, { passive: true });
+  p.addEventListener("touchmove", (e) => { if (y0 == null) return; const dy = Math.max(0, e.touches[0].clientY - y0); p.style.transform = `translateY(${dy}px)`; }, { passive: true });
+  p.addEventListener("touchend", (e) => { if (y0 == null) return; const dy = e.changedTouches[0].clientY - y0; y0 = null; p.style.transform = "";
+    if (dy > 80) hidePop(p); }, { passive: true });
+});
+document.addEventListener("mousedown", (e) => {
+  if (!e.target.closest(".pop, #voiceBtn, #speedBtn, #moreBtn, #fontBtn, .nav[data-go=more]")) $$(".pop").forEach(hidePop);
+});
+$("#voiceBtn").onclick = () => { const wasOpen = !$("#popVoice").hidden; openPop("#popVoice", $("#voiceBtn")); if (!wasOpen) { buildVoiceList(true); moveFilterPill(false); } };
+$("#speedBtn").onclick = () => openPop("#popSet", $("#speedBtn"));
+function openMore(anchor) { $(".tile[data-a=dark]").classList.toggle("on", cfg.dark); $(".tile[data-a=page]").style.display = st.doc?.is_pdf ? "" : "none"; openPop("#popMore", anchor, "right"); }
+$("#moreBtn").onclick = () => openMore($("#moreBtn"));
+$("#fontBtn").onclick = () => openPop("#popFont", $("#fontBtn"), "right");
+$$("#popSet .tabs button[data-t]").forEach((b) => (b.onclick = () => {
+  $$("#popSet .tabs button[data-t]").forEach((x) => x.classList.toggle("on", x === b));
+  $$("#popSet .tab").forEach((t) => (t.hidden = t.dataset.t !== b.dataset.t));
+}));
+$$("#popMore .tile").forEach((t) => (t.onclick = () => {
+  const a = t.dataset.a; $("#popMore").hidden = true; $("#popMore").classList.remove("closing");
+  if (a === "font") openPop("#popFont", $("#moreBtn"), "right");
+  if (a === "pron") openPron();
+  if (a === "timer") { renderTimer(); openPop("#popTimer", $("#moreBtn"), "right"); }
+  if (a === "dark") { cfg.dark = !cfg.dark; save(); applyLook(); try { localStorage.setItem("reader.themeSet", "1"); } catch (e) {} }
+  if (a === "page") togglePageView();
+  if (a === "library") go("library");
+  if (a === "taskist") location.href = "../";
+}));
+
+// ---------- speed / readers / repeat / pause / volume ----------
+function setRate(r) {
+  const oldBucket = typeof genSpeed === "function" ? genSpeed() : 1;
+  cfg.rate = Math.round(Math.min(4, Math.max(0.5, r)) * 100) / 100; save();
+  audio.playbackRate = cfg.rate / (st.clipSpeed || 1);
+  if (st.doc && genSpeed() !== oldBucket) { clearTimeout(st._rt); st._rt = setTimeout(() => prefetch(st.idx + 1, true), 400); }
+  $("#speedBtn").textContent = cfg.rate.toFixed(2) + "x";
+  $("#spVal").textContent = cfg.rate.toFixed(2) + "x"; $("#spWpm").textContent = `(${Math.round(180 * cfg.rate)} WPM)`;
+  $("#spRange").value = cfg.rate; $("#spRange").style.setProperty("--fill", ((cfg.rate - 0.5) / 3.5) * 100 + "%");
+  $$(".presets button").forEach((b) => b.classList.toggle("on", +b.dataset.r === cfg.rate));
+  updateTimes();
+}
+$("#spRange").oninput = (e) => setRate(+e.target.value);
+$("#spUp").onclick = () => setRate(cfg.rate + 0.05); $("#spDn").onclick = () => setRate(cfg.rate - 0.05);
+$$(".presets button").forEach((b) => (b.onclick = () => setRate(+b.dataset.r)));
+const PAUSES = [["natural", "Natural"], ["0", "0-second"], ["1", "1 second"], ["2", "2 seconds"], ["3", "3 seconds"], ["5", "5 seconds"], ["stop", "Indefinitely (full stop)"]];
+for (const id of ["#pauseS", "#pauseP"]) $(id).innerHTML = PAUSES.map(([v, l]) => `<option value="${v}">${l}</option>`).join("");
+const bindSel = (id, key, after) => { $(id).value = String(cfg[key]); $(id).onchange = (e) => { cfg[key] = e.target.type === "checkbox" ? e.target.checked : e.target.value; save(); after && after(); }; };
+bindSel("#secVoice", "secVoice", () => { st.clips.clear(); lastPrefetch = -99; });
+bindSel("#secBy", "secBy"); bindSel("#repeat", "repeat"); bindSel("#pauseS", "pauseS"); bindSel("#pauseP", "pauseP");
+$("#secOn").checked = cfg.secOn; $("#secOn").onchange = (e) => { cfg.secOn = e.target.checked; save(); lastPrefetch = -99; };
+$("#vol").value = cfg.volume; const setVol = () => { audio.volume = cfg.volume / 100; $("#volVal").textContent = cfg.volume + "%"; };
+$("#vol").oninput = (e) => { cfg.volume = +e.target.value; setVol(); save(); };
+$("#nativeSpeed").checked = cfg.nativeSpeed;
+$("#nativeSpeed").onchange = (e) => { cfg.nativeSpeed = e.target.checked; save(); if (st.doc) prefetch(st.idx + 1, true); };
+$("#skipNotes").checked = cfg.skipNotes;
+$("#skipNotes").onchange = (e) => { cfg.skipNotes = e.target.checked; save(); if (st.doc) { const sid = st.order[st.idx]; buildOrder(); st.idx = nearestIdx(sid); updateTimes(); } };
+
+// ---------- look ----------
+function applyLook() {
+  document.body.classList.toggle("dark", cfg.dark); document.body.classList.toggle("dys", cfg.dys);
+  document.body.classList.toggle("collapsed", cfg.collapsed);
+  document.documentElement.style.setProperty("--read", cfg.fontSize + "px");
+  document.documentElement.style.setProperty("--lh", cfg.spacing ? "2.1" : "1.65");
+  document.documentElement.style.setProperty("--ls", cfg.spacing ? "0.04em" : "0");
+  $("#fsVal").textContent = cfg.fontSize; $("#spacing").checked = cfg.spacing; $("#dys").checked = cfg.dys;
+}
+$("#fsUp").onclick = () => { cfg.fontSize = Math.min(34, cfg.fontSize + 1); save(); applyLook(); };
+$("#fsDn").onclick = () => { cfg.fontSize = Math.max(12, cfg.fontSize - 1); save(); applyLook(); };
+$("#spacing").onchange = (e) => { cfg.spacing = e.target.checked; save(); applyLook(); };
+$("#dys").onchange = (e) => { cfg.dys = e.target.checked; save(); applyLook(); };
+$("#collapse").onclick = () => { cfg.collapsed = !cfg.collapsed; save(); applyLook(); };
+
+// ---------- navigation ----------
+function go(v) {
+  if (v === "upload") { $("#file").click(); return; }
+  if (v === "pron") { openPron(); return; }
+  if (v === "more") { openMore($(".nav[data-go=more]")); return; }
+  if (v === "add") { st.view = "add"; } else if (v === "library") { st.view = "library"; refreshDocs(); } else st.view = "read";
+  $("#vAdd").hidden = st.view !== "add"; $("#vRead").hidden = st.view !== "read"; $("#vLib").hidden = st.view !== "library";
+  $$(".nav").forEach((n) => n.classList.toggle("on", n.dataset.go === (st.view === "read" ? "" : st.view)));
+}
+$$(".nav").forEach((n) => (n.onclick = () => go(n.dataset.go)));
+$("#libBack").onclick = () => go(st.doc ? "read" : "add");
+$("#closeDoc").onclick = () => { stop(); $("#pill").classList.remove("on"); st.doc = null; $("#pageBtn").hidden = true; go("add"); };
+$("#chipPdf").onclick = () => $("#file").click();
+
+// ---------- add text / upload ----------
+window.__busy = (m) => busy(m);
+function busy(msg) { $("#busy").hidden = !msg; $("#busy").textContent = msg || ""; }
+$("#chipListen").onclick = async () => {
+  const text = $("#newText").value.trim(); if (!text) { toast("Type or paste some text first."); return; }
+  busy("Preparing…");
+  try { const { id } = await api("/api/text", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) });
+    busy(); await openDoc(id, true); } catch (e) { busy("Something went wrong."); }
+};
+async function upload(file) {
+  go("add"); busy(`Reading “${file.name}”…`);
+  const fd = new FormData(); fd.append("file", file);
+  try { const { id } = await api("/api/upload", { method: "POST", body: fd }); busy(); await openDoc(id); }
+  catch (e) { busy("Could not read that PDF."); }
+}
+$("#file").onchange = (e) => { if (e.target.files[0]) upload(e.target.files[0]); e.target.value = ""; };
+document.addEventListener("dragover", (e) => e.preventDefault());
+document.addEventListener("drop", (e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f && /pdf$/i.test(f.name)) upload(f); });
+
+// ---------- library ----------
+const mins = (chars) => Math.max(1, Math.round(chars / CPS / 60 / (cfg.rate || 1)));
+async function refreshDocs() {
+  const docs = await api("/api/docs"); const ul = $("#docs"); ul.innerHTML = "";
+  $("#libCount").textContent = docs.length;
+  if (!docs.length) { ul.innerHTML = `<div class="emptylib">Your library is empty. Upload a PDF or add some text.</div>`; return; }
+  for (const [di, d] of docs.entries()) {
+    const li = document.createElement("li"); li.style.setProperty("--i", di);
+    const date = new Date((d.opened || d.added) * 1000).toISOString().slice(0, 10);
+    li.innerHTML = `<span class="dicon ${d.is_pdf ? "pdf" : "txt"}">${d.is_pdf ? "PDF" : "TXT"}</span>
+      <span><span class="t">${esc(d.title)}</span><small>${d.is_pdf ? d.pages + " pages · " : ""}${date} · ${d.chars_left ? mins(d.chars_left) + " min left" : "finished"}</small></span>
+      <button class="ico kebab" title="Options">⋮</button>`;
+    li.onclick = () => openDoc(d.id);
+    li.querySelector(".kebab").onclick = (e) => {
+      e.stopPropagation(); li.querySelector(".menu")?.remove();
+      const m = document.createElement("div"); m.className = "menu"; m.innerHTML = `<button>Remove from library</button>`;
+      m.firstChild.onclick = async (ev) => { ev.stopPropagation(); await api(`/api/docs/${d.id}`, { method: "DELETE" });
+        if (st.doc?.id === d.id) { stop(); st.doc = null; } refreshDocs(); };
+      li.appendChild(m); setTimeout(() => document.addEventListener("click", () => m.remove(), { once: true }));
+    };
+    ul.appendChild(li);
+  }
+}
+
+// ---------- document ----------
+async function openDoc(id, autoplay = false) {
+  stop();
+  const d = await api(`/api/docs/${id}`);
+  st.doc = d; st.clips.clear(); st.sentEl.clear(); st.info.clear(); st.pageSents.clear();
+  for (const b of d.blocks) for (const s of b.sentences) {
+    st.info.set(s.id, { block: b, s });
+    for (const r of s.rects) { if (!st.pageSents.has(r[0])) st.pageSents.set(r[0], []); st.pageSents.get(r[0]).push([s.id, r]); }
+  }
+  buildOrder(); renderText(); $("#pages").innerHTML = ""; st.pagesBuilt = false; st.pageView = false;
+  $("#text").parentElement.hidden = false; $("#pages").hidden = true;
+  $("#pageBtn").hidden = !d.is_pdf;
+  go("read");
+  const pos = d.progress?.pos || 0; st.idx = nearestIdx(pos);
+  mark(st.order[st.idx], false); st.sentEl.get(st.order[st.idx])?.scrollIntoView({ block: "center" });
+  updateTimes();
+  if (autoplay) restart(true);
+  else { lastPrefetch = -99; getClip(st.idx); prefetch(st.idx + 1, true); }   // warm up so Play starts instantly
+}
+function buildOrder() {
+  st.order = []; st.chars = [];
+  for (const b of st.doc.blocks) {
+    if (cfg.skipNotes && (b.kind === "footnote" || b.kind === "caption")) continue;
+    for (const s of b.sentences) { st.order.push(s.id); st.chars.push(s.text.length); }
+  }
+}
+function nearestIdx(sid) { const i = st.order.findIndex((x) => x >= sid); return i < 0 ? Math.max(0, st.order.length - 1) : i; }
+function renderText() {
+  const art = $("#text"); art.innerHTML = ""; let page = -1;
+  for (const b of st.doc.blocks) {
+    if (st.doc.is_pdf && b.page !== page) { page = b.page; const p = document.createElement("div"); p.className = "pg"; p.textContent = `Page ${page + 1}`; art.appendChild(p); }
+    if (b.kind === "figure") { art.appendChild(figureEl(b)); continue; }
+    const el = document.createElement(b.kind === "heading" ? "h2" : "p"); el.className = `blk ${b.kind}`;
+    for (const s of b.sentences) {
+      const sp = document.createElement("span"); sp.className = "s"; sp.dataset.sid = s.id; sp.textContent = s.text;
+      st.sentEl.set(s.id, sp); el.appendChild(sp); el.appendChild(document.createTextNode(" "));
+    }
+    art.appendChild(el);
+  }
+}
+// ---------- figures: drawn straight from the PDF, sized in proportion to the page ----------
+function figureEl(b) {
+  const [x0, y0, x1, y1] = b.rect, pw = st.doc.page_sizes[b.page]?.[0] || 612;
+  const fig = document.createElement("figure"); fig.className = "fig";
+  fig.style.width = Math.min(100, ((x1 - x0) / (pw * 0.78)) * 100).toFixed(1) + "%";
+  fig.style.aspectRatio = `${x1 - x0} / ${y1 - y0}`;
+  fig.innerHTML = `<canvas></canvas><button class="zoom" title="Enlarge"><svg viewBox="0 0 24 24"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></button>`;
+  fig._b = b; figObserver.observe(fig);
+  fig.onclick = () => openLightbox(b);
+  return fig;
+}
+async function drawRegion(canvas, docId, b, cssWidth) {
+  const [x0, y0, x1, y1] = b.rect; const dpr = Math.min(3, window.devicePixelRatio || 1);
+  const page = await (await pdfDoc(docId)).getPage(b.page + 1);
+  const scale = (cssWidth * dpr) / (x1 - x0); const vp = page.getViewport({ scale });
+  canvas.width = Math.max(1, Math.round((x1 - x0) * scale)); canvas.height = Math.max(1, Math.round((y1 - y0) * scale));
+  await page.render({ canvasContext: canvas.getContext("2d"), viewport: vp, transform: [1, 0, 0, 1, -x0 * scale, -y0 * scale] }).promise;
+}
+const figObserver = new IntersectionObserver((entries) => {
+  for (const e of entries) if (e.isIntersecting) {
+    const fig = e.target; figObserver.unobserve(fig);
+    drawRegion(fig.querySelector("canvas"), st.doc.id, fig._b, fig.clientWidth || 600).then(() => fig.classList.add("ready")).catch(() => fig.classList.add("failed"));
+  }
+}, { rootMargin: "600px" });
+function openLightbox(b) {
+  const lb = document.createElement("div"); lb.className = "lightbox";
+  lb.innerHTML = `<canvas></canvas><button class="ico x" title="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>`;
+  document.body.appendChild(lb);
+  const [x0, y0, x1, y1] = b.rect, ar = (x1 - x0) / (y1 - y0);
+  const w = Math.min(window.innerWidth * 0.9, window.innerHeight * 0.86 * ar); const c = lb.querySelector("canvas"); c.style.width = w + "px";
+  drawRegion(c, st.doc.id, b, w).then(() => lb.classList.add("ready"));
+  const close = () => { lb.classList.add("closing"); setTimeout(() => lb.remove(), 220); document.removeEventListener("keydown", esc); };
+  const esc = (e) => e.key === "Escape" && close();
+  lb.onclick = close; document.addEventListener("keydown", esc);
+}
+
+$("#text").addEventListener("click", (e) => { const s = e.target.closest(".s"); if (s && window.getSelection().isCollapsed) playFrom(+s.dataset.sid); });
+
+// page view (PDFs)
+function togglePageView() {
+  if (!st.doc?.is_pdf) return;
+  st.pageView = !st.pageView;
+  $("#text").parentElement.hidden = st.pageView; $("#pages").hidden = !st.pageView;
+  if (st.pageView && !st.pagesBuilt) buildPages();
+  mark(st.order[st.idx], true);
+}
+$("#pageBtn").onclick = togglePageView;
+const pageObserver = new IntersectionObserver((entries) => {
+  for (const e of entries) if (e.isIntersecting) { const pg = e.target; pageObserver.unobserve(pg);
+    localUrl(`/api/docs/${st.doc.id}/page/${pg.dataset.n}.png?scale=1.5`).then((u) => (pg.querySelector("img").src = u)); }
+}, { rootMargin: "800px" });
+function buildPages() {
+  const wrap = $("#pages"); wrap.innerHTML = ""; st.pagesBuilt = true;
+  const W = Math.min(900, $("#vRead").clientWidth - (window.innerWidth < 760 ? 20 : 60));
+  st.doc.page_sizes.forEach(([pw, ph], n) => {
+    const pg = document.createElement("div"); pg.className = "page"; pg.dataset.n = n;
+    pg.style.width = W + "px"; pg.style.height = (W * ph) / pw + "px";
+    pg.innerHTML = `<img alt="Page ${n + 1}">`; pageObserver.observe(pg);
+    pg.onclick = (e) => {
+      const r = pg.getBoundingClientRect(); const x = ((e.clientX - r.left) / r.width) * pw, y = ((e.clientY - r.top) / r.height) * ph;
+      const hit = (st.pageSents.get(n) || []).find(([, q]) => x >= q[1] - 2 && x <= q[3] + 2 && y >= q[2] - 2 && y <= q[4] + 2);
+      if (hit) playFrom(hit[0]);
+    };
+    wrap.appendChild(pg);
+  });
+}
+function drawPageHL(sid, scroll) {
+  $$(".hlr").forEach((e) => e.remove());
+  const inf = st.info.get(sid); if (!inf || !st.pagesBuilt) return; let first = null;
+  for (const [n, x0, y0, x1, y1] of inf.s.rects) {
+    const pg = document.querySelector(`.page[data-n="${n}"]`); if (!pg) continue;
+    const [pw, ph] = st.doc.page_sizes[n]; const d = document.createElement("div"); d.className = "hlr";
+    Object.assign(d.style, { left: (100 * (x0 - 1)) / pw + "%", top: (100 * (y0 - 1)) / ph + "%", width: (100 * (x1 - x0 + 2)) / pw + "%", height: (100 * (y1 - y0 + 2)) / ph + "%" });
+    pg.appendChild(d); first = first || d;
+  }
+  if (scroll && first) first.scrollIntoView({ block: "center", behavior: "smooth" });
+}
+
+// ---------- highlighting (sentence + estimated word) ----------
+let lastMarked = null, words = null;
+function mark(sid, scroll = true) {
+  if (lastMarked != null) { const old = st.sentEl.get(lastMarked); if (old) { old.classList.remove("cur"); if (words) old.textContent = st.info.get(lastMarked).s.text; } }
+  words = null;
+  const el = st.sentEl.get(sid); if (!el) return;
+  el.classList.add("cur"); lastMarked = sid;
+  // split the current sentence into word spans for word-level highlighting
+  const text = st.info.get(sid).s.text; el.textContent = "";
+  const parts = text.split(/(\s+)/); let acc = 0; words = [];
+  for (const p of parts) {
+    if (/^\s+$/.test(p)) { el.appendChild(document.createTextNode(p)); continue; }
+    const w = document.createElement("span"); w.className = "w"; w.textContent = p; el.appendChild(w);
+    acc += p.replace(/[^\w]/g, "").length + 1; words.push([acc, w]);
+  }
+  if (st.pageView) drawPageHL(sid, scroll);
+  else if (scroll) { const r = el.getBoundingClientRect(); if (r.top < 90 || r.bottom > window.innerHeight - 60) el.scrollIntoView({ block: "center", behavior: "smooth" }); }
+  updateTimes();
+}
+let curWord = null;
+function movePill(el) {
+  const pill = $("#pill"), card = pill.parentElement; if (card.hidden || !el.isConnected) return;
+  const r = el.getBoundingClientRect(), c = card.getBoundingClientRect();
+  const x = r.left - c.left - 3, y = r.top - c.top - 1;
+  const prev = pill._pos; const far = !prev || Math.abs(prev[1] - y) > 120 || !pill.classList.contains("on");
+  pill.classList.toggle("jump", far); pill._pos = [x, y];
+  Object.assign(pill.style, { transform: `translate(${x}px, ${y}px)`, width: r.width + 6 + "px", height: r.height + 2 + "px" });
+  pill.classList.add("on");
+}
+function tickWords() {
+  if (words && audio.duration && !audio.paused) {
+    const total = words.at(-1)[0];
+    const frac = Math.min(1, (audio.currentTime + 0.08) / audio.duration);
+    const target = frac * total; const hit = words.find(([end]) => end >= target);
+    if (hit && hit[1] !== curWord) { curWord?.classList.remove("on"); curWord = hit[1]; curWord.classList.add("on"); movePill(curWord); }
+  } else if (curWord && !st.playing) { curWord.classList.remove("on"); curWord = null; $("#pill").classList.remove("on"); }
+  if (st.doc && st.order.length) {
+    const frac = audio.duration && !audio.paused ? audio.currentTime / audio.duration : 0;
+    $("#bar").style.width = `${(100 * (st.idx + frac)) / st.order.length}%`;
+  }
+  if (st.doc && st.playing) { const now = elapsedChars() + (audio.duration ? (audio.currentTime / audio.duration) * (st.chars[st.idx] || 0) : 0); $("#tNow").textContent = fmt(now / CPS / cfg.rate); }
+  requestAnimationFrame(tickWords);
+}
+requestAnimationFrame(tickWords);
+const fmt = (s) => { s = Math.max(0, Math.round(s)); const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = s % 60; return (h ? h + ":" + String(m).padStart(2, "0") : String(m).padStart(2, "0")) + ":" + String(x).padStart(2, "0"); };
+const elapsedChars = () => st.chars.slice(0, st.idx).reduce((a, b) => a + b, 0);
+function updateTimes() {
+  if (!st.doc) { $("#tNow").textContent = $("#tAll").textContent = "00:00"; return; }
+  const total = st.chars.reduce((a, b) => a + b, 0);
+  $("#tNow").textContent = fmt(elapsedChars() / CPS / cfg.rate); $("#tAll").textContent = fmt(total / CPS / cfg.rate);
+}
+
+// ---------- player ----------
+const BUCKETS = [0.75, 1, 1.25, 1.5, 1.75, 2];
+const genSpeed = () => cfg.nativeSpeed ? BUCKETS.reduce((a, b) => Math.abs(b - Math.min(cfg.rate, 2)) < Math.abs(a - Math.min(cfg.rate, 2)) ? b : a) : 1;
+function getClip(i) {
+  const sid = st.order[i], voice = voiceFor(i), sp = genSpeed(), k = `${voice}|${sp}|${sid}`;
+  if (!st.clips.has(k)) {
+    const t0 = performance.now();
+    const p = localFetch(`/api/audio/${st.doc.id}/${sid}?voice=${encodeURIComponent(voice)}&speed=${sp}`).then(async (r) => {
+      if (!r.ok) throw new Error("tts " + r.status);
+      return { url: URL.createObjectURL(await r.blob()), src: r.headers.get("X-Library"), ms: performance.now() - t0, speed: sp };
+    });
+    p.catch(() => st.clips.delete(k)); st.clips.set(k, p);
+    if (st.clips.size > 40) { const [ok, op] = st.clips.entries().next().value; st.clips.delete(ok); op.then((c) => URL.revokeObjectURL(c.url)).catch(() => {}); }
+  }
+  return st.clips.get(k);
+}
+let lastPrefetch = -99;
+function prefetch(from = st.idx + 1, force = false) {
+  if (!st.doc) return;
+  if (force || Math.abs(st.idx - lastPrefetch) >= 6) {
+    lastPrefetch = st.idx; const idxs = []; for (let j = from; j < Math.min(st.order.length, from + 40); j++) idxs.push(j);
+    if (idxs.length) api(`/api/prefetch/${st.doc.id}`, { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sids: idxs.map((j) => st.order[j]), voice: primarySpec(), voices: idxs.map(voiceFor), speed: genSpeed() }) }).catch(() => {});
+  }
+  for (let j = 1; j <= 3; j++) if (st.order[st.idx + j] != null) getClip(st.idx + j);
+}
+function gapAfter(i) {
+  const a = st.info.get(st.order[i]), b = st.info.get(st.order[i + 1]); if (!b) return 0;
+  const newPara = a.block !== b.block; const setting = newPara ? cfg.pauseP : cfg.pauseS;
+  if (setting === "stop") return "stop";
+  if (setting !== "natural") return +setting;
+  let g = newPara ? 0.6 : 0.22;
+  if (a.block.kind === "heading" || b.block.kind === "heading") g = 0.8;
+  if (/[,;:]$/.test(a.s.text)) g = 0.12;
+  return g / cfg.rate;
+}
+// when the phone screen is off, timers are slowed down: skip the gaps instead of waiting on them
+const sleep = (ms) => new Promise((r) => (document.hidden ? r() : setTimeout(r, ms)));
+async function waitWhilePaused(tok) { while (!st.playing && tok === st.token) await sleep(80); }
+async function loop(tok) {
+  while (tok === st.token && st.idx < st.order.length) {
+    const sid = st.order[st.idx]; mark(sid); saveProgress();
+    const pending = getClip(st.idx); prefetch();          // queue what comes next while this one is made
+    const spin = setTimeout(() => $("#play").classList.add("loading"), 180);
+    let clip; try { clip = await pending; } catch (e) { clearTimeout(spin); toast("Speech engine error, retrying…"); await sleep(1500); continue; }
+    clearTimeout(spin); $("#play").classList.remove("loading");
+    if (tok !== st.token) return;
+    mediaSession(sid);
+    for (let rep = 0; rep < +cfg.repeat; rep++) {
+      st.clipSpeed = clip.speed;
+      audio.src = clip.url; audio.playbackRate = cfg.rate / clip.speed; audio.volume = cfg.volume / 100;
+      await waitWhilePaused(tok); if (tok !== st.token) return;
+      await new Promise((res) => { audio.onended = res; audio.onerror = res; st._abort = res; audio.play().catch(res); });
+      if (tok !== st.token) return;
+      if (rep < +cfg.repeat - 1) await sleep(500 / cfg.rate);
+    }
+    if (st.stopAt != null && sid === st.stopAt) { st.stopAt = null; setPlaying(false); st.token++; return; }
+    if (st.timerEnd && Date.now() > st.timerEnd) { st.timerEnd = 0; setPlaying(false); st.token++; st.idx++; toast("Sleep timer: stopped."); return; }
+    const g = gapAfter(st.idx);
+    if (g === "stop") { st.idx++; mark(st.order[st.idx] ?? sid); setPlaying(false); st.token++; return; }
+    await sleep(g * 1000); await waitWhilePaused(tok); if (tok !== st.token) return;
+    st.idx++;
+  }
+  if (st.idx >= st.order.length) { st.idx = st.order.length - 1; setPlaying(false); toast("Finished reading."); }
+}
+function playFrom(sid, stopAt = null) {
+  let i = st.order.indexOf(sid);
+  if (i < 0) { cfg.skipNotes = false; $("#skipNotes").checked = false; save(); buildOrder(); i = st.order.indexOf(sid); }
+  st.idx = i; st.stopAt = stopAt; restart(true);
+}
+function restart(play) { st.token++; audio.pause(); st._abort && st._abort(); if (play && st.doc) { setPlaying(true); loop(st.token); } }
+function stop() { st.token++; audio.pause(); setPlaying(false); }
+function setPlaying(p) {
+  st.playing = p; $("#play").classList.toggle("playing", p); if (!p) $("#play").classList.remove("loading");
+  if (p && audio.src && audio.paused && !audio.ended && audio.currentTime > 0) audio.play();
+  if (!p) audio.pause();
+}
+function toggle() {
+  if (!st.doc) { if (st.view === "add" && $("#newText").value.trim()) $("#chipListen").click(); return; }
+  if (st.playing) setPlaying(false);
+  else if (audio.src && audio.currentTime > 0 && !audio.ended && st.token) setPlaying(true);
+  else restart(true);
+}
+function jump(d) { if (!st.doc) return; st.idx = Math.min(st.order.length - 1, Math.max(0, st.idx + d)); st.stopAt = null; const was = st.playing; restart(was); if (!was) mark(st.order[st.idx]); }
+function jumpPara(d) {
+  const cur = st.info.get(st.order[st.idx]).block; let i = st.idx;
+  if (d < 0) { while (i > 0 && st.info.get(st.order[i - 1]).block === cur) i--;
+    if (i === st.idx && i > 0) { const pb = st.info.get(st.order[i - 1]).block; i--; while (i > 0 && st.info.get(st.order[i - 1]).block === pb) i--; } }
+  else while (i < st.order.length - 1 && st.info.get(st.order[i]).block === cur) i++;
+  jump(i - st.idx);
+}
+$("#play").onclick = toggle; $("#back").onclick = () => jump(-1); $("#fwd").onclick = () => jump(1);
+$("#progress").onclick = (e) => { if (!st.doc) return; const r = e.currentTarget.getBoundingClientRect(); jump(Math.floor(((e.clientX - r.left) / r.width) * st.order.length) - st.idx); };
+document.addEventListener("keydown", (e) => {
+  if (e.target.matches("input, select, textarea")) return;
+  if (e.code === "Space") { e.preventDefault(); toggle(); }
+  else if (e.key === "ArrowRight") { e.preventDefault(); e.shiftKey ? jumpPara(1) : jump(1); }
+  else if (e.key === "ArrowLeft") { e.preventDefault(); e.shiftKey ? jumpPara(-1) : jump(-1); }
+});
+let saveT = null;
+function saveProgress() {
+  clearTimeout(saveT);
+  saveT = setTimeout(() => st.doc && api(`/api/docs/${st.doc.id}/progress`, { method: "PUT", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ pos: st.order[st.idx], voice: cfg.voice, rate: cfg.rate }) }).catch(() => {}), 500);
+}
+
+// ---------- lock-screen / headphone controls ----------
+function mediaSession(sid) {
+  if (!("mediaSession" in navigator) || !st.doc) return;
+  navigator.mediaSession.metadata = new MediaMetadata({ title: st.doc.title, artist: "Reader · " + vName(cfg.voice),
+    album: (st.info.get(sid)?.s.text || "").slice(0, 80) });
+}
+if ("mediaSession" in navigator) {
+  const ms = navigator.mediaSession;
+  ms.setActionHandler("play", () => { if (!st.playing) toggle(); });
+  ms.setActionHandler("pause", () => { if (st.playing) toggle(); });
+  ms.setActionHandler("nexttrack", () => jump(1)); ms.setActionHandler("previoustrack", () => jump(-1));
+  try { ms.setActionHandler("seekforward", () => jumpPara(1)); ms.setActionHandler("seekbackward", () => jumpPara(-1)); } catch (e) {}
+}
+audio.addEventListener("play", () => "mediaSession" in navigator && (navigator.mediaSession.playbackState = "playing"));
+audio.addEventListener("pause", () => "mediaSession" in navigator && (navigator.mediaSession.playbackState = "paused"));
+
+// ---------- read selection ----------
+let selT; document.addEventListener("selectionchange", () => { clearTimeout(selT); selT = setTimeout(() => document.dispatchEvent(new Event("mouseup")), 450); });
+document.addEventListener("mouseup", () => setTimeout(() => {
+  const sel = window.getSelection(), btn = $("#readsel");
+  if (sel.isCollapsed || !sel.rangeCount || !$("#text").contains(sel.anchorNode)) { btn.hidden = true; return; }
+  const range = sel.getRangeAt(0);
+  const hits = [...st.sentEl.values()].filter((el) => range.intersectsNode(el)).map((el) => +el.dataset.sid);
+  if (!hits.length) { btn.hidden = true; return; }
+  const r = range.getBoundingClientRect();
+  Object.assign(btn.style, { left: r.left + r.width / 2 - 60 + "px", top: Math.max(10, r.top - 42) + "px" }); btn.hidden = false;
+  btn.onclick = () => { btn.hidden = true; sel.removeAllRanges(); playFrom(Math.min(...hits), Math.max(...hits)); };
+}, 10));
+
+// ---------- sleep timer ----------
+function renderTimer() {
+  $$(".timers button").forEach((b) => b.classList.toggle("on", b.dataset.m === String(st.timerMins || 0)));
+  $("#timerLeft").textContent = st.timerEnd ? `Stops in ${fmt((st.timerEnd - Date.now()) / 1000)}` : "No timer set";
+}
+$$(".timers button").forEach((b) => (b.onclick = () => { st.timerMins = +b.dataset.m; st.timerEnd = st.timerMins ? Date.now() + st.timerMins * 60000 : 0; renderTimer(); }));
+setInterval(() => { if (!$("#popTimer").hidden) renderTimer(); }, 1000);
+
+// ---------- pronunciation ----------
+async function openPron() {
+  const lex = await api("/api/lexicon"); const tb = $("#pronRows"); tb.innerHTML = "";
+  const entries = Object.entries(lex); if (!entries.length) entries.push(["", ""]);
+  for (const [w, s] of entries) addPronRow(w, s);
+  $("#modalPron").hidden = false;
+}
+function addPronRow(w = "", s = "") {
+  const tr = document.createElement("tr");
+  tr.innerHTML = `<td><input placeholder="e.g. SQL" value="${esc(w)}"></td><td><input placeholder="e.g. sequel" value="${esc(s)}"></td>
+    <td style="white-space:nowrap"><button class="pv" title="Listen">▶</button> <button class="ico" title="Remove">✕</button></td>`;
+  tr.querySelector(".pv").onclick = () => { const say = tr.querySelectorAll("input")[1].value || tr.querySelectorAll("input")[0].value; if (say) localUrl(`/api/preview?voice=${encodeURIComponent(primarySpec())}&text=${encodeURIComponent(say)}`).then((u) => { previewAudio.src = u; previewAudio.play(); }); };
+  tr.querySelector(".ico").onclick = () => tr.remove();
+  $("#pronRows").appendChild(tr);
+}
+$("#pronAdd").onclick = () => addPronRow();
+$("#pronSave").onclick = async () => {
+  const lex = {}; for (const tr of $$("#pronRows tr")) { const [a, b] = [...tr.querySelectorAll("input")].map((i) => i.value.trim()); if (a && b) lex[a] = b; }
+  await api("/api/lexicon", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(lex) });
+  closeModal(); st.clips.clear(); toast("Pronunciations saved.");
+};
+function closeModal() { const m = $("#modalPron"); m.classList.add("closing"); setTimeout(() => { m.hidden = true; m.classList.remove("closing"); }, 150); }
+$("#modalPron .x").onclick = closeModal;
+$("#modalPron").addEventListener("mousedown", (e) => { if (e.target.id === "modalPron") closeModal(); });
+
+// ---------- misc ----------
+let toastT; function toast(m) { $("#toast").textContent = m; $("#toast").hidden = false; clearTimeout(toastT); toastT = setTimeout(() => ($("#toast").hidden = true), 2600); }
+async function refreshStats() {
+  try { const s = await api("/api/stats");
+    const dl = /Downloading voice (\d+)%/.exec(s.engine?.device || "");
+    $("#stats").innerHTML = (dl ? `<b>Downloading the voice…</b><div class="dl"><i style="width:${dl[1]}%"></i></div>${dl[1]}% · one time only<br><br>` : "") + `<b>Audio library</b><br>${s.clips.toLocaleString()} sentences saved<br>${(+s.audio_hours).toFixed(2)} h of speech · ${s.megabytes} MB` +
+      (s.engine ? `<br>Voice: ${s.engine.device}${s.engine.speed_x_realtime !== "…" ? " · " + s.engine.speed_x_realtime + "× real time" : ""}` : "");
+  } catch (e) {}
+}
+(async function init() {
+  applyLook();
+  const v = await api("/api/voices"); st.voices = v.voices; st.vById = new Map(v.voices.map((x) => [x.id, x]));
+  if (!cfg.voice || !st.vById.has(cfg.voice)) cfg.voice = v.default;
+  const opts = v.voices.map((x) => `<option value="${x.id}">${esc(x.name)} (${x.accent}, ${x.gender === "F" ? "female" : "male"})</option>`).join("");
+  $("#blendVoice").innerHTML = opts; $("#secVoice").innerHTML = opts; $("#secVoice").value = cfg.secVoice;
+  renderVoiceBtn(false); setRate(cfg.rate); setVol(); go("add"); refreshStats(); setInterval(refreshStats, 2000);
+  engine.start().catch((e) => toast("Voice engine failed to start: " + e.message));
+})();
+
+</script>
+</body>
+</html>

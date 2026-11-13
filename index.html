@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="build" content="20261112-132845">
+<meta name="build" content="20261113-183151">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Taskist</title>
 <meta name="theme-color" content="#000000" id="mtc">
@@ -1086,11 +1086,12 @@ function pickCat(cur,cb){
 function pickPri(anchor,cur,cb){popMenu(anchor,[{t:'Primary',dot:'var(--p1)',cls:'sp1',on:cur===1,f:function(){cb(1)}},{t:'Secondary',dot:'var(--p2)',cls:'sp2',on:cur===2,f:function(){cb(2)}},{t:'No priority',on:!cur,f:function(){cb(0)}}],{arrow:anchor.classList.contains('chip')?anchor:null})}
 /* ---------- notes menu / sort / settings ---------- */
 function openLatin(){var t=document.documentElement.dataset.th==='light'?'light':'dark';location.href='latin/?th='+t+'&from=taskist#home'}
+function openReader(){var t=document.documentElement.dataset.th==='light'?'light':'dark';location.href='reader/?th='+t}
 function notesMenu(a){
  if(filt==='trash'){popMenu(a,[{t:'Select items',f:function(){enterSel()}},{t:'Empty Recently deleted',dan:1,f:function(){confirmDlg('Empty Recently deleted?','All notes here will be deleted for good.','Delete all',function(){S.notes=S.notes.filter(function(n){return !n.del});save();render()})}},{t:'Back to all notes',f:function(){setFilter('all')}}]);return}
- popMenu(a,[{t:S.set.view==='grid'?'List view':'Grid view',f:function(){S.set.view=S.set.view==='grid'?'list':'grid';save();render()}},{t:'Delete items',f:function(){enterSel()}},{t:'Sort',f:sortSheet},{t:'Templates',f:openTemplates},{t:'Lingua Latina',f:openLatin},{t:'Settings',f:openSettings}]);
+ popMenu(a,[{t:S.set.view==='grid'?'List view':'Grid view',f:function(){S.set.view=S.set.view==='grid'?'list':'grid';save();render()}},{t:'Delete items',f:function(){enterSel()}},{t:'Sort',f:sortSheet},{t:'Templates',f:openTemplates},{t:'Lingua Latina',f:openLatin},{t:'Reader',f:openReader},{t:'Settings',f:openSettings}]);
 }
-function todosMenu(a){popMenu(a,[{t:'Delete items',f:function(){enterSel()}},{t:'Clear completed',f:function(){var ids=S.todos.filter(function(t){return t.done&&!t.del&&matchF(t,tfilt)}).map(function(t){return t.id});if(!ids.length){toast('Nothing completed');return}delTodos(ids)}},{t:'Sort',f:sortSheet},{t:'Lingua Latina',f:openLatin},{t:'Settings',f:openSettings}])}
+function todosMenu(a){popMenu(a,[{t:'Delete items',f:function(){enterSel()}},{t:'Clear completed',f:function(){var ids=S.todos.filter(function(t){return t.done&&!t.del&&matchF(t,tfilt)}).map(function(t){return t.id});if(!ids.length){toast('Nothing completed');return}delTodos(ids)}},{t:'Sort',f:sortSheet},{t:'Lingua Latina',f:openLatin},{t:'Reader',f:openReader},{t:'Settings',f:openSettings}])}
 function sortSheet(){
  var isT=tab==='todos',cur=isT?S.set.tsort:S.set.sort,rows=isT?[['created','Date added'],['due','Reminder time'],['custom','My order']]:[['updated','Modified time'],['created','Created time'],['title','Title'],['custom','My order']];
  sheet('<h3>Sort by</h3>'+rows.map(function(r){return '<button class="srow noic'+(cur===r[0]?' on':'')+'" data-s="'+r[0]+'"><span>'+r[1]+'</span>'+(cur===r[0]?'<span class="n" style="color:var(--ac)">'+IC.tickW+'</span>':'')+'</button>'}).join('')+'<button class="srow noic" data-s="__pf"><span>Primary first</span><span class="tg'+(S.set.prifirst?' on':'')+'" style="margin-left:auto"></span></button><button class="scancel" data-x>CANCEL</button>',function(sh){
@@ -1855,7 +1856,7 @@ function gDayCard(d,u){var x=workoutFor(d),L=esc(dayLabel(d).toUpperCase()),back
  if(x.w&&(x.state==='planned'||x.state==='active')){var w=x.w;return '<div class="gtoday"><div class="glab">'+L+'</div><div class="gname">'+esc(w.name)+'</div><div class="gmeta">'+w.ex.length+' exercises · about '+estMin(w)+' min</div><div class="gex">'+w.ex.slice(0,4).map(function(e){return '<div>'+esc(e.t)+' <small>'+e.s+' × '+esc(e.r)+'</small></div>'}).join('')+(w.ex.length>4?'<div class="mu">+ '+(w.ex.length-4)+' more</div>':'')+'</div><div class="gbtns">'+back+'</div></div>'}
  var nm=x.state==='rest'?'Rest day':x.state==='skipped'?'Skipped':x.log?'Not finished':'No workout',mt=x.state==='rest'?'Recovery is part of the plan.':x.state==='skipped'?'This workout moved to the next free day.':d<dk()?'Nothing was logged this day.':'Nothing planned.';
  return '<div class="gtoday rs"><div class="glab">'+L+'</div><div class="gname">'+nm+'</div><div class="gmeta">'+mt+'</div><div class="gbtns">'+back+(x.log?'<button class="btn" data-a="glogv" data-id="'+x.log.id+'">View</button>':'')+'</div></div>'}
-function gymMenu(a){popMenu(a,[{t:'Units: '+(G().unit==='kg'?'kg':'lb'),f:function(){G().unit=G().unit==='kg'?'lb':'kg';save();render();toast('Weights in '+G().unit)}},{t:'Rest days',f:restSheet},{t:'Import from Lifeloop',f:importLifeloop},{t:'Lingua Latina',f:openLatin},{t:'Settings',f:openSettings}])}
+function gymMenu(a){popMenu(a,[{t:'Units: '+(G().unit==='kg'?'kg':'lb'),f:function(){G().unit=G().unit==='kg'?'lb':'kg';save();render();toast('Weights in '+G().unit)}},{t:'Rest days',f:restSheet},{t:'Import from Lifeloop',f:importLifeloop},{t:'Lingua Latina',f:openLatin},{t:'Reader',f:openReader},{t:'Settings',f:openSettings}])}
 function restSheet(){var r=G().rest.slice();function rows(){return [1,2,3,4,5,6,0].map(function(d){return '<button class="srow noic" data-d="'+d+'"><span>'+WDL[d]+'</span><span class="tg'+(r.indexOf(d)>-1?' on':'')+'" style="margin-left:auto"></span></button>'}).join('')}
  sheet('<h3>Rest days</h3><div id="rsR">'+rows()+'</div><button class="scancel" data-x>DONE</button>',function(sh){sh.addEventListener('click',function(e){var b=e.target.closest('[data-d]');if(!b)return;var d=+b.dataset.d,i=r.indexOf(d);if(i>-1)r.splice(i,1);else r.push(d);G().rest=r.slice();save();$('#rsR',sh).innerHTML=rows();render()})})}
 function gStart(train){var t=dk(),wf=workoutFor(t),w=wf.w;
@@ -2018,7 +2019,7 @@ function foodSheet(item,meal){
 function targetsSheet(){var T=F().tgt;
  sheet('<h3>Daily targets</h3><div class="sform"><div class="xgrid x4"><label>kcal<input type="text" inputmode="numeric" id="tK" value="'+T.kcal+'"></label><label>Protein g<input type="text" inputmode="numeric" id="tP" value="'+T.p+'"></label><label>Carbs g<input type="text" inputmode="numeric" id="tC" value="'+T.c+'"></label><label>Fat g<input type="text" inputmode="numeric" id="tF" value="'+T.f+'"></label></div><div class="xgrid"><label>Water glasses<input type="text" inputmode="numeric" id="tW" value="'+T.water+'"></label><label>Glass size ml<input type="text" inputmode="numeric" id="tG" value="'+T.glass+'"></label></div><div class="sbtns"><button class="btn" data-x>Cancel</button><button class="btn pri" data-k="save">Save</button></div></div>',function(sh){
   sh.addEventListener('click',function(e){if(!e.target.closest('[data-k=save]'))return;T.kcal=parseInt($('#tK',sh).value)||T.kcal;T.p=parseInt($('#tP',sh).value)||T.p;T.c=parseInt($('#tC',sh).value)||T.c;T.f=parseInt($('#tF',sh).value)||T.f;T.water=Math.min(20,parseInt($('#tW',sh).value)||T.water);T.glass=parseInt($('#tG',sh).value)||T.glass;save();closeTop(render)})})}
-function foodMenu(a){popMenu(a,[{t:'Daily targets',f:targetsSheet},{t:'Go to today',f:function(){foodDay=dk();render()}},{t:'Import from Lifeloop',f:importLifeloop},{t:'Lingua Latina',f:openLatin},{t:'Settings',f:openSettings}])}
+function foodMenu(a){popMenu(a,[{t:'Daily targets',f:targetsSheet},{t:'Go to today',f:function(){foodDay=dk();render()}},{t:'Import from Lifeloop',f:importLifeloop},{t:'Lingua Latina',f:openLatin},{t:'Reader',f:openReader},{t:'Settings',f:openSettings}])}
 
 /* ================= CALENDAR ================= */
 var calSel=dk(),calMonth=null,calAnim={},gymSel=null,gymDir=0;
@@ -2078,7 +2079,7 @@ function calPanel(){
   if(e.target.closest('[data-ptoday]')){calSel=dk();calMonth=null;closeTop(render)}
  });
 }
-function calMenu(a){popMenu(a,[{t:'Go to today',f:function(){calSel=dk();render()}},{t:'Lingua Latina',f:openLatin},{t:'Settings',f:openSettings}])}
+function calMenu(a){popMenu(a,[{t:'Go to today',f:function(){calSel=dk();render()}},{t:'Lingua Latina',f:openLatin},{t:'Reader',f:openReader},{t:'Settings',f:openSettings}])}
 
 document.addEventListener('keydown',function(e){if(e.key==='Escape'&&layers.length){e.preventDefault();closeTop()}});
 /* ---------- compact header on scroll ---------- */
@@ -2094,8 +2095,8 @@ var DESK=window.matchMedia('(min-width:1000px)');
 function deskSide(){var nv=$('#nav');if(!nv||nv.querySelector('.nbrand'))return;
  var br=document.createElement('div');br.className='nbrand';br.innerHTML='<img src="icon-192.png" alt=""><span>Taskist</span>';nv.insertBefore(br,nv.firstChild);
  var ft=document.createElement('div');ft.className='nfoot';
- ft.innerHTML='<button class="nlink" data-dk="latin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 5.5a2.5 2.5 0 0 1 2.5-2.5h12v15.5H7a2.5 2.5 0 0 0-2.5 2.5z"/><path d="M4.5 21V5.5"/></svg>Lingua Latina</button><button class="nlink" data-dk="set">'+TI.gear+'Settings</button>';
- nv.appendChild(ft);ft.addEventListener('click',function(e){var b=e.target.closest('[data-dk]');if(!b)return;if(b.dataset.dk==='latin')openLatin();else openSettings()});}
+ ft.innerHTML='<button class="nlink" data-dk="latin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 5.5a2.5 2.5 0 0 1 2.5-2.5h12v15.5H7a2.5 2.5 0 0 0-2.5 2.5z"/><path d="M4.5 21V5.5"/></svg>Lingua Latina</button><button class="nlink" data-dk="reader"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10v4h4l5 4V6L8 10z"/><path d="M16.5 9a4 4 0 0 1 0 6M19 6.5a7.5 7.5 0 0 1 0 11"/></svg>Reader</button><button class="nlink" data-dk="set">'+TI.gear+'Settings</button>';
+ nv.appendChild(ft);ft.addEventListener('click',function(e){var b=e.target.closest('[data-dk]');if(!b)return;if(b.dataset.dk==='latin')openLatin();else if(b.dataset.dk==='reader')openReader();else openSettings()});}
 function deskCols(){var m=$('#main');if(!m||!DESK.matches||selMode||(tab!=='gym'&&tab!=='food'))return;if(m.querySelector(':scope>.dgrid'))return;
  var kids=[].slice.call(m.children),c1=[],c2=[],first=null;
  if(tab==='food'){var st=-1;kids.forEach(function(k,i){if(st<0&&k.classList.contains('fsum'))st=i});if(st<0)return;
