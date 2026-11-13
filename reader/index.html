@@ -1966,7 +1966,7 @@ const follow = (() => {
       if (x < 1 && anim) anim.id = requestAnimationFrame(step); else anim = null; }; anim.id = requestAnimationFrame(step);
   }
   const target = (el, at = 0.38) => { const v = view(), r = el.getBoundingClientRect(), vr = v.getBoundingClientRect(); return v.scrollTop + (r.top - vr.top) - v.clientHeight * at + r.height / 2; };
-  const away = () => performance.now() - userAt < 2600;
+  const away = () => performance.now() - userAt < 1200;   // after you stop scrolling, it glides back on its own
   // anything you do to scroll counts as "you're looking elsewhere for a moment"
   const mark = () => { userAt = performance.now(); if (anim) { cancelAnimationFrame(anim.id); anim = null; } };
   addEventListener("wheel", mark, { passive: true }); addEventListener("touchmove", mark, { passive: true });
@@ -1978,7 +1978,7 @@ const follow = (() => {
     const el = curWord || st.sentEl.get(st.order[st.idx]); if (!el || !el.isConnected) return;
     const r = el.getBoundingClientRect(), vr = v.getBoundingClientRect(), y = (r.top + r.height / 2 - vr.top) / v.clientHeight;
     const offscreen = y < 0.05 || y > 0.95;
-    btn().classList.toggle("show", !!(st.playing && offscreen && away()));
+    btn().classList.remove("show");
     if (!st.playing || away() || anim) return;
     if (y < 0.18 || y > 0.68) glideTo(target(el), offscreen ? null : 700);   // drift back to a comfortable reading line
   }
