@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="build" content="20261113-183151">
+<meta name="build" content="20261113-183446">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Taskist</title>
 <meta name="theme-color" content="#000000" id="mtc">
@@ -155,7 +155,7 @@ svg{display:block}
 /* editor */
 .ed{position:fixed;inset:0;z-index:30;background:var(--bg);display:flex;flex-direction:column;animation:ein .24s cubic-bezier(.2,.8,.3,1)}
 @keyframes ein{from{transform:translateY(10px) scale(.99);opacity:0}}
-.edtop{flex:none;display:flex;align-items:center;gap:4px;height:52px;padding:env(safe-area-inset-top) 8px 0;box-sizing:content-box;max-width:680px;width:100%;margin:0 auto}
+.edtop{flex:none;display:flex;align-items:center;gap:4px;height:52px;padding:env(safe-area-inset-top) 8px 0;box-sizing:border-box;height:calc(52px + env(safe-area-inset-top));max-width:680px;width:100%;margin:0 auto}
 .edtop .sp{flex:1}
 .edtop .ic:disabled{opacity:.3}
 .edsc{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
