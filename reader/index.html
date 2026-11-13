@@ -215,7 +215,7 @@ button { -webkit-tap-highlight-color: transparent; }
 /* reading highlight: sentence fades, a pill glides from word to word */
 .s { transition: background-color .35s ease, color .35s ease; }
 .card.doc { position: relative; }
-#pill { position: absolute; left: 0; top: 0; width: 0; height: 0; border-radius: 5px; background: var(--hl-word); opacity: 0; pointer-events: none; z-index: 0; will-change: transform, width, height;
+#pill { position: absolute; left: 0; top: 0; width: 0; height: 0; border-radius: 5px; background: var(--hl-word); opacity: 0; pointer-events: none; z-index: 0; will-change: transform; transform-origin: 0 0;
   transition: transform .16s var(--ease), width .16s var(--ease), height .16s var(--ease), opacity .25s ease; }
 #pill.on { opacity: 1; }
 #pill.jump { transition: opacity .25s ease; }
@@ -485,7 +485,7 @@ body.dark .fig.ready { background: #fff; } body.dark .fig { box-shadow: 0 6px 22
 .s.cur { box-shadow: 0 0 0 2px var(--hl); }
 /* long documents: let the browser skip laying out paragraphs that are off screen */
 #text .blk { content-visibility: auto; contain-intrinsic-size: auto 120px; }
-#text .blk:has(.s.cur) { content-visibility: visible; }
+#text .blk.live { content-visibility: visible; }
 .view { overscroll-behavior: contain; }
 .fig { animation-play-state: paused; } .fig.vis { animation-play-state: running; }
 #follow { position: fixed; z-index: 16; left: 50%; bottom: 26px; transform: translate(-50%, 16px); opacity: 0; pointer-events: none; border: 0; border-radius: 22px;
@@ -1234,6 +1234,18 @@ async function synth(text, voice, speed) {
   };
   try { return (await tts.generate(text, { voice: parts[0][0], speed })).audio; } finally { tts.generate_from_ids = orig; }
 }
+// trimming silence and packing the WAV happen here, off the page, so scrolling never stutters when a clip finishes
+function trim(a, th = 0.01, keep = 0.03) {
+  let s = 0, e = a.length - 1; while (s < a.length && Math.abs(a[s]) < th) s++; while (e > s && Math.abs(a[e]) < th) e--;
+  const k = Math.floor(keep * 24000); return a.slice(Math.max(0, s - k), Math.min(a.length, e + k));
+}
+function toWav(f32) {
+  const SR = 24000, b = new ArrayBuffer(44 + f32.length * 2), v = new DataView(b), w = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+  w(0, "RIFF"); v.setUint32(4, 36 + f32.length * 2, true); w(8, "WAVE"); w(12, "fmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, SR, true); v.setUint32(28, SR * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, "data"); v.setUint32(40, f32.length * 2, true);
+  const out = new Int16Array(b, 44); for (let i = 0; i < f32.length; i++) out[i] = Math.max(-1, Math.min(1, f32[i])) * 32767;
+  return b;
+}
 self.onmessage = async ({ data: m }) => {
   try {
     if (m.type === "init") {
@@ -1246,8 +1258,8 @@ self.onmessage = async ({ data: m }) => {
       const t = performance.now(); const a = await synth("This is a short test of the voice engine.", "af_heart", 1);
       postMessage({ type: "ready", device, rtf: (performance.now() - t) / 1000 / (a.length / 24000) });
     } else if (m.type === "synth") {
-      const t = performance.now(); const audio = await synth(m.text, m.voice, m.speed);
-      postMessage({ type: "done", id: m.id, audio, ms: performance.now() - t }, [audio.buffer]);
+      const t = performance.now(); const audio = trim(await synth(m.text, m.voice, m.speed)); const wav = toWav(audio);
+      postMessage({ type: "done", id: m.id, wav, seconds: audio.length / 24000, ms: performance.now() - t }, [wav]);
     }
   } catch (e) { postMessage({ type: "error", id: m.id, error: String(e && e.message || e) }); }
 };`;
@@ -1335,9 +1347,9 @@ const engine = {
       else {
         const id = ++this.seq; const r = await new Promise((res, rej) => { this.waiters.set(id, { res, rej });
           this.worker.postMessage({ type: "synth", id, text: j.text, voice: j.voice, speed: j.speed }); });
-        const audio = trim(r.audio), blob = wav(audio);
-        await idb.put("clips", j.key, { blob, seconds: audio.length / SR, gen: r.ms / 1000, created: Date.now() });
-        bumpStats(audio.length / SR, r.ms / 1000, blob.size); this.generated++;
+        const blob = new Blob([r.wav], { type: "audio/wav" });
+        await idb.put("clips", j.key, { blob, seconds: r.seconds, gen: r.ms / 1000, created: Date.now() });
+        bumpStats(r.seconds, r.ms / 1000, blob.size); this.generated++;
         j.res();
       }
     } catch (e) { j.rej(e); }
@@ -1909,6 +1921,7 @@ function mark(sid, scroll = true) {
   words = null;
   const el = st.sentEl.get(sid); if (!el) return;
   el.classList.add("cur"); lastMarked = sid;
+  const blk = el.closest(".blk"); if (blk !== mark.blk) { mark.blk?.classList.remove("live"); blk?.classList.add("live"); mark.blk = blk; }
   // split the current sentence into word spans for word-level highlighting
   const text = st.info.get(sid).s.text; el.textContent = "";
   const parts = text.split(/(\s+)/); let acc = 0; words = [];
@@ -1929,6 +1942,8 @@ function movePill(el) {
   Object.assign(pillGo, { x: r.left - c.left - 3, y: r.top - c.top - 1, w: r.width + 6, h: r.height + 2 });
   // first word, or a jump to a far-away line: appear there instead of sliding across the page
   if (!pillNow.on || Math.abs(pillGo.y - pillNow.y) > 140) Object.assign(pillNow, pillGo);
+  // size is set once per word; the glide itself only uses transform, so no re-layout on every frame
+  pill.style.width = pillGo.w + "px"; pill.style.height = pillGo.h + "px"; stepPill.drawn = false;
   pillNow.on = true; pill.classList.add("on");
 }
 let pillT = 0;
@@ -1937,7 +1952,7 @@ function stepPill(t) {
   const k = 1 - Math.exp(-dt / 70);               // ~70 ms glide, same feel at 60 Hz or 120 Hz
   let moving = false;
   for (const p of ["x", "y", "w", "h"]) { const d = pillGo[p] - pillNow[p]; if (Math.abs(d) > 0.15) { pillNow[p] += d * k; moving = true; } else pillNow[p] = pillGo[p]; }
-  if (moving || !stepPill.drawn) { const pill = $("#pill"); pill.style.transform = `translate3d(${pillNow.x}px, ${pillNow.y}px, 0)`; pill.style.width = pillNow.w + "px"; pill.style.height = pillNow.h + "px"; stepPill.drawn = true; }
+  if (moving || !stepPill.drawn) { const pill = $("#pill"); pill.style.transform = `translate3d(${pillNow.x.toFixed(2)}px, ${pillNow.y.toFixed(2)}px, 0) scale(${(pillNow.w / (pillGo.w || 1)).toFixed(4)}, ${(pillNow.h / (pillGo.h || 1)).toFixed(4)})`; stepPill.drawn = true; }
   if (moving) stepPill.drawn = false;
 }
 // ---------- follow: keep the reading position in view, gently ----------
@@ -2101,8 +2116,9 @@ let saveT = null;
 function saveProgress() {
   clearTimeout(saveT);
   saveT = setTimeout(() => st.doc && api(`/api/docs/${st.doc.id}/progress`, { method: "PUT", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ pos: st.order[st.idx], voice: cfg.voice, rate: cfg.rate }) }).catch(() => {}), 500);
+    body: JSON.stringify({ pos: st.order[st.idx], voice: cfg.voice, rate: cfg.rate }) }).catch(() => {}), st.playing ? 4000 : 600);
 }
+addEventListener("pagehide", () => { if (saveT && st.doc) { clearTimeout(saveT); saveT = null; api(`/api/docs/${st.doc.id}/progress`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pos: st.order[st.idx], voice: cfg.voice, rate: cfg.rate }) }).catch(() => {}); } });
 
 // ---------- lock-screen / headphone controls ----------
 function mediaSession(sid) {

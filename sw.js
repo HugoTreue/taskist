@@ -1,4 +1,4 @@
-const V='taskist-20261113-205028',FILES=['./','index.html','manifest.webmanifest','icon-192.png','icon-512.png'];
+const V='taskist-20261113-205858',FILES=['./','index.html','manifest.webmanifest','icon-192.png','icon-512.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(V).then(c=>c.addAll(FILES)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==V).map(x=>caches.delete(x)))).then(()=>self.clients.claim()))});
 self.addEventListener('fetch',e=>{const r=e.request;if(r.method!=='GET')return;const u=new URL(r.url);if(u.origin!==location.origin)return;
@@ -6,7 +6,9 @@ self.addEventListener('fetch',e=>{const r=e.request;if(r.method!=='GET')return;c
  const net=r.mode==='navigate'?fetch(r.url,{cache:'no-store',credentials:'same-origin'}):fetch(r,{cache:'no-cache'});
  // each page is saved under its own address, so Lingua Latina or Reader never replace Taskist's offline copy
  const key=r.mode==='navigate'?new Request(u.origin+u.pathname):r;
- e.respondWith(net.then(res=>{if(res.ok){const cp=res.clone();caches.open(V).then(c=>c.put(key,cp))}return res}).catch(()=>caches.match(key).then(m=>m||(r.mode==='navigate'&&!/\/(latin|reader)\//.test(u.pathname)?caches.match('index.html'):m))))});
+ // Reader: isolate the page so the voice engine may use several processor cores (faster speech, less waiting)
+ const iso=/\/reader\//.test(u.pathname)&&r.mode==='navigate'?res=>{if(!res)return res;const h=new Headers(res.headers);h.set('Cross-Origin-Opener-Policy','same-origin');h.set('Cross-Origin-Embedder-Policy','credentialless');return new Response(res.body,{status:res.status,statusText:res.statusText,headers:h})}:res=>res;
+ e.respondWith(net.then(res=>{if(res.ok){const cp=res.clone();caches.open(V).then(c=>c.put(key,cp))}return iso(res)}).catch(()=>caches.match(key).then(m=>m||(r.mode==='navigate'&&!/\/(latin|reader)\//.test(u.pathname)?caches.match('index.html'):m)).then(iso)))});
 self.addEventListener('push',e=>{let d={};try{d=e.data?e.data.json():{}}catch(x){d={body:e.data&&e.data.text()}}
  e.waitUntil(self.registration.showNotification(d.title||'Taskist',{body:d.body||'',tag:d.tag||'taskist',icon:'icon-192.png',badge:'icon-192.png',data:{id:d.id||''}}))});
 self.addEventListener('notificationclick',e=>{e.notification.close();e.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(cs=>{for(const c of cs){if('focus' in c)return c.focus()}return self.clients.openWindow('./')}))});
