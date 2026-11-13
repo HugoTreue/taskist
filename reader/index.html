@@ -215,7 +215,7 @@ button { -webkit-tap-highlight-color: transparent; }
 /* reading highlight: sentence fades, a pill glides from word to word */
 .s { transition: background-color .35s ease, color .35s ease; }
 .card.doc { position: relative; }
-#pill { position: absolute; left: 0; top: 0; width: 0; height: 0; border-radius: 4px; background: var(--hl-word); opacity: 0; pointer-events: none; z-index: 0;
+#pill { position: absolute; left: 0; top: 0; width: 0; height: 0; border-radius: 5px; background: var(--hl-word); opacity: 0; pointer-events: none; z-index: 0; will-change: transform, width, height;
   transition: transform .16s var(--ease), width .16s var(--ease), height .16s var(--ease), opacity .25s ease; }
 #pill.on { opacity: 1; }
 #pill.jump { transition: opacity .25s ease; }
@@ -478,6 +478,24 @@ body.dark .fig.ready { background: #fff; } body.dark .fig { box-shadow: 0 6px 22
 }
 @media (max-width: 360px) { #top .center .side { gap: 4px; } #top .center .side.l { padding-right: 10px; } #top .center .side.r { padding-left: 10px; } }
 
+
+/* ================= smoother reading ================= */
+#pill { transition: opacity .3s ease !important; box-shadow: 0 0 0 1px color-mix(in srgb, var(--hl-word) 60%, transparent); }
+.s { transition: background-color .45s ease, box-shadow .45s ease; }
+.s.cur { box-shadow: 0 0 0 2px var(--hl); }
+/* long documents: let the browser skip laying out paragraphs that are off screen */
+#text .blk { content-visibility: auto; contain-intrinsic-size: auto 120px; }
+#text .blk:has(.s.cur) { content-visibility: visible; }
+.view { overscroll-behavior: contain; }
+.fig { animation-play-state: paused; } .fig.vis { animation-play-state: running; }
+#follow { position: fixed; z-index: 16; left: 50%; bottom: 26px; transform: translate(-50%, 16px); opacity: 0; pointer-events: none; border: 0; border-radius: 22px;
+  background: var(--blue); color: #fff; font-size: 13px; font-weight: 500; padding: 10px 16px 10px 13px; display: flex; align-items: center; gap: 7px;
+  box-shadow: 0 6px 20px rgba(26,111,232,.35); transition: opacity .3s ease, transform .35s var(--ease); }
+#follow svg { width: 16px; height: 16px; }
+#follow { bottom: 74px; }
+@media (max-width: 760px) { #follow { bottom: calc(84px + env(safe-area-inset-bottom)); } }
+#follow.show { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+@media (max-width: 760px) { #follow { bottom: calc(92px + env(safe-area-inset-bottom)); } }
 </style>
 </head>
 <body>
@@ -634,6 +652,7 @@ body.dark .fig.ready { background: #fff; } body.dark .fig { box-shadow: 0 6px 22
 
 <button id="readsel" hidden>▶ Read selection</button>
 <div id="toast" hidden></div>
+<button id="follow" title="Back to where it's reading"><svg viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></svg><span>Back to reading</span></button>
 <script type="module">
 // ---------- sentence segmentation (port of segment.py) ----------
 const ABBREV = new Set(("mr mrs ms dr prof sr jr st mt ft no nos vol vols fig figs eq eqs ref refs sec ch chap pp p ed eds al etc vs cf approx " +
@@ -1718,7 +1737,8 @@ function go(v) {
 }
 $$(".nav").forEach((n) => (n.onclick = () => go(n.dataset.go)));
 $("#libBack").onclick = () => go(st.doc ? "read" : "add");
-$("#closeDoc").onclick = () => { stop(); $("#pill").classList.remove("on"); st.doc = null; $("#pageBtn").hidden = true; go("add"); };
+$("#follow").onclick = () => follow.back();
+$("#closeDoc").onclick = () => { stop(); $("#pill").classList.remove("on"); pillNow.on = false; st.doc = null; $("#pageBtn").hidden = true; go("add"); };
 $("#chipPdf").onclick = () => $("#file").click();
 
 // ---------- add text / upload ----------
@@ -1778,7 +1798,7 @@ async function openDoc(id, autoplay = false) {
   $("#pageBtn").hidden = !d.is_pdf;
   go("read");
   const pos = d.progress?.pos || 0; st.idx = nearestIdx(pos);
-  mark(st.order[st.idx], false); st.sentEl.get(st.order[st.idx])?.scrollIntoView({ block: "center" });
+  mark(st.order[st.idx], false); follow.snap(st.sentEl.get(st.order[st.idx]));
   updateTimes();
   if (autoplay) restart(true);
   else { lastPrefetch = -99; getClip(st.idx); prefetch(st.idx + 1, true); }   // warm up so Play starts instantly
@@ -1824,7 +1844,7 @@ async function drawRegion(canvas, docId, b, cssWidth) {
 }
 const figObserver = new IntersectionObserver((entries) => {
   for (const e of entries) if (e.isIntersecting) {
-    const fig = e.target; figObserver.unobserve(fig);
+    const fig = e.target; figObserver.unobserve(fig); fig.classList.add("vis");
     drawRegion(fig.querySelector("canvas"), st.doc.id, fig._b, fig.clientWidth || 600).then(() => fig.classList.add("ready")).catch(() => fig.classList.add("failed"));
   }
 }, { rootMargin: "600px" });
@@ -1898,36 +1918,80 @@ function mark(sid, scroll = true) {
     acc += p.replace(/[^\w]/g, "").length + 1; words.push([acc, w]);
   }
   if (st.pageView) drawPageHL(sid, scroll);
-  else if (scroll) { const r = el.getBoundingClientRect(); if (r.top < 90 || r.bottom > window.innerHeight - 60) el.scrollIntoView({ block: "center", behavior: "smooth" }); }
+  else if (scroll) follow.nudge(el);
   updateTimes();
 }
 let curWord = null;
+const pillNow = { x: 0, y: 0, w: 0, h: 0, on: false }, pillGo = { x: 0, y: 0, w: 0, h: 0 };
 function movePill(el) {
   const pill = $("#pill"), card = pill.parentElement; if (card.hidden || !el.isConnected) return;
   const r = el.getBoundingClientRect(), c = card.getBoundingClientRect();
-  const x = r.left - c.left - 3, y = r.top - c.top - 1;
-  const prev = pill._pos; const far = !prev || Math.abs(prev[1] - y) > 120 || !pill.classList.contains("on");
-  pill.classList.toggle("jump", far); pill._pos = [x, y];
-  Object.assign(pill.style, { transform: `translate(${x}px, ${y}px)`, width: r.width + 6 + "px", height: r.height + 2 + "px" });
-  pill.classList.add("on");
+  Object.assign(pillGo, { x: r.left - c.left - 3, y: r.top - c.top - 1, w: r.width + 6, h: r.height + 2 });
+  // first word, or a jump to a far-away line: appear there instead of sliding across the page
+  if (!pillNow.on || Math.abs(pillGo.y - pillNow.y) > 140) Object.assign(pillNow, pillGo);
+  pillNow.on = true; pill.classList.add("on");
 }
-function tickWords() {
+let pillT = 0;
+function stepPill(t) {
+  const dt = Math.min(64, t - (pillT || t)); pillT = t; if (!pillNow.on) return;
+  const k = 1 - Math.exp(-dt / 70);               // ~70 ms glide, same feel at 60 Hz or 120 Hz
+  let moving = false;
+  for (const p of ["x", "y", "w", "h"]) { const d = pillGo[p] - pillNow[p]; if (Math.abs(d) > 0.15) { pillNow[p] += d * k; moving = true; } else pillNow[p] = pillGo[p]; }
+  if (moving || !stepPill.drawn) { const pill = $("#pill"); pill.style.transform = `translate3d(${pillNow.x}px, ${pillNow.y}px, 0)`; pill.style.width = pillNow.w + "px"; pill.style.height = pillNow.h + "px"; stepPill.drawn = true; }
+  if (moving) stepPill.drawn = false;
+}
+// ---------- follow: keep the reading position in view, gently ----------
+const follow = (() => {
+  const view = () => $("#vRead"); let anim = null, userAt = 0, ownScroll = false;
+  const ease = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+  function glideTo(top, ms) {
+    const v = view(), from = v.scrollTop, to = Math.max(0, Math.min(top, v.scrollHeight - v.clientHeight)), d = to - from;
+    if (Math.abs(d) < 2) return; cancelAnimationFrame(anim?.id); const t0 = performance.now(); ms = ms || Math.min(1100, 380 + Math.abs(d) * 0.35);
+    anim = { to }; const step = (t) => { const x = Math.min(1, (t - t0) / ms); ownScroll = true; v.scrollTop = from + d * ease(x);
+      if (x < 1 && anim) anim.id = requestAnimationFrame(step); else anim = null; }; anim.id = requestAnimationFrame(step);
+  }
+  const target = (el, at = 0.38) => { const v = view(), r = el.getBoundingClientRect(), vr = v.getBoundingClientRect(); return v.scrollTop + (r.top - vr.top) - v.clientHeight * at + r.height / 2; };
+  const away = () => performance.now() - userAt < 2600;
+  // anything you do to scroll counts as "you're looking elsewhere for a moment"
+  const mark = () => { userAt = performance.now(); if (anim) { cancelAnimationFrame(anim.id); anim = null; } };
+  addEventListener("wheel", mark, { passive: true }); addEventListener("touchmove", mark, { passive: true });
+  addEventListener("keydown", (e) => { if (/Page|Home|End|Arrow(Up|Down)/.test(e.key) && !e.target.matches("input,textarea,select")) mark(); });
+  document.addEventListener("pointerdown", (e) => { if (e.target === view() && e.offsetX > view().clientWidth) mark(); });   // dragging the scrollbar
+  const btn = () => $("#follow");
+  function check() {
+    const v = view(); if (!st.doc || st.view !== "read" || st.pageView || v.hidden) { btn().classList.remove("show"); return; }
+    const el = curWord || st.sentEl.get(st.order[st.idx]); if (!el || !el.isConnected) return;
+    const r = el.getBoundingClientRect(), vr = v.getBoundingClientRect(), y = (r.top + r.height / 2 - vr.top) / v.clientHeight;
+    const offscreen = y < 0.05 || y > 0.95;
+    btn().classList.toggle("show", !!(st.playing && offscreen && away()));
+    if (!st.playing || away() || anim) return;
+    if (y < 0.18 || y > 0.68) glideTo(target(el), offscreen ? null : 700);   // drift back to a comfortable reading line
+  }
+  setInterval(check, 160);
+  return {
+    nudge(el) { if (!away()) check(); },
+    snap(el) { if (el) view().scrollTop = Math.max(0, target(el, 0.35)); },
+    back() { userAt = 0; const el = curWord || st.sentEl.get(st.order[st.idx]); if (el) glideTo(target(el)); btn().classList.remove("show"); },
+  };
+})();
+function tickWords(t) {
+  stepPill(t || performance.now());
   if (words && audio.duration && !audio.paused) {
     const total = words.at(-1)[0];
     const frac = Math.min(1, (audio.currentTime + 0.08) / audio.duration);
     const target = frac * total; const hit = words.find(([end]) => end >= target);
     if (hit && hit[1] !== curWord) { curWord?.classList.remove("on"); curWord = hit[1]; curWord.classList.add("on"); movePill(curWord); }
-  } else if (curWord && !st.playing) { curWord.classList.remove("on"); curWord = null; $("#pill").classList.remove("on"); }
+  } else if (curWord && !st.playing) { curWord.classList.remove("on"); curWord = null; $("#pill").classList.remove("on"); pillNow.on = false; }
   if (st.doc && st.order.length) {
     const frac = audio.duration && !audio.paused ? audio.currentTime / audio.duration : 0;
-    $("#bar").style.width = `${(100 * (st.idx + frac)) / st.order.length}%`;
+    const bw = `${((100 * (st.idx + frac)) / st.order.length).toFixed(2)}%`; if (bw !== tickWords.bw) { $("#bar").style.width = bw; tickWords.bw = bw; }
   }
-  if (st.doc && st.playing) { const now = elapsedChars() + (audio.duration ? (audio.currentTime / audio.duration) * (st.chars[st.idx] || 0) : 0); $("#tNow").textContent = fmt(now / CPS / cfg.rate); }
+  if (st.doc && st.playing) { const now = elapsedChars() + (audio.duration ? (audio.currentTime / audio.duration) * (st.chars[st.idx] || 0) : 0); const tx = fmt(now / CPS / cfg.rate); if (tx !== tickWords.tx) { $("#tNow").textContent = tx; tickWords.tx = tx; } }
   requestAnimationFrame(tickWords);
 }
 requestAnimationFrame(tickWords);
 const fmt = (s) => { s = Math.max(0, Math.round(s)); const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = s % 60; return (h ? h + ":" + String(m).padStart(2, "0") : String(m).padStart(2, "0")) + ":" + String(x).padStart(2, "0"); };
-const elapsedChars = () => st.chars.slice(0, st.idx).reduce((a, b) => a + b, 0);
+const elapsedChars = () => { if (st._pc !== st.chars) { st._pc = st.chars; st._pre = [0]; for (const c of st.chars) st._pre.push(st._pre.at(-1) + c); } return st._pre[st.idx] || 0; };
 function updateTimes() {
   if (!st.doc) { $("#tNow").textContent = $("#tAll").textContent = "00:00"; return; }
   const total = st.chars.reduce((a, b) => a + b, 0);
